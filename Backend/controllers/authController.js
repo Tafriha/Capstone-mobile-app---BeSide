@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const AppError = require("../utils/AppError");
 const { promisify } = require("util");
+const passwordHash = require("../utils/passwordHash");
 
 /**
  * Generate JWT token
@@ -91,7 +92,7 @@ exports.currentUser = catchAsync(async (req, res, next) => {
  */
 exports.logout = catchAsync(async (req, res, next) => {
   res.cookie("jwt", "loggedout", {
-    expires: new Date(Date.now() + 10 * 1000),
+    expires: new Date(Date.now()),
     httpOnly: true,
   });
 
@@ -151,6 +152,39 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
       },
     },
   });
+});
+
+/**
+ * Register a new user
+ * @route POST /api/v1/user/register
+ */
+exports.registerUser = catchAsync(async (req, res, next) => {
+  const { userName, email, mobileNo, password } = req.body;
+
+  // Check if user already exists
+  const userExists = await User.findOne({
+    $or: [{ email }, { userName }],
+  });
+
+  if (userExists) {
+    return next(
+      new AppError("User with this email or username already exists", 400)
+    );
+  }
+
+  // Hash password
+  const hashedPassword = await passwordHash(password);
+
+  // Create user
+  const user = await User.create({
+    userName,
+    email,
+    password: hashedPassword,
+    mobileNo,
+  });
+
+  // Generate and send JWT token
+  this.createSendToken(user, 201, res);
 });
 
 /**
