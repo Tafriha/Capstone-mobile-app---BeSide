@@ -5,6 +5,20 @@ const bcrypt = require("bcrypt");
 const AppError = require("../utils/AppError");
 const { promisify } = require("util");
 const passwordHash = require("../utils/passwordHash");
+const { default: mongoose } = require("mongoose");
+const dummyVerification = mongoose.models.dummyVerification || mongoose.model("dummyVerification", new mongoose.Schema({
+  firstName: String,
+  lastName: String,
+  wwcc: {
+    number: String,
+    expiryDate: String,
+  },
+  license: {
+    number: String,
+    expiryDate: String,
+  },
+  dob: String,
+}));
 
 /**
  * Generate JWT token
@@ -106,53 +120,51 @@ exports.logout = catchAsync(async (req, res, next) => {
  * Verify user ID
  */
 exports.verifyUser = catchAsync(async (req, res, next) => {
-  const { idNumber, firstName, lastName, dateOfBirth } = req.body;
-
-  if (!idNumber || !firstName || !lastName || !dateOfBirth) {
-    return next(
-      new AppError("Please provide all required verification information", 400)
-    );
+  const { userName, verificationIdType, firstName, lastName, number, expiry, dob } = req.body;
+  let record = null;
+  if (verificationIdType === "wwcc") {
+    record = await dummyVerification.findOne({
+      firstName,
+      lastName,
+      wwcc: {
+        number,
+        expiryDate: expiry,
+      },
+      dob: dob,
+    });
+  } else if (verificationIdType === "license") {
+    record = await dummyVerification.findOne({
+      firstName,
+      lastName,
+      license: {
+        number,
+        expiryDate: expiry,
+      },
+      dob: dob,
+    });
+  }
+  if (!record) {
+    return next(new AppError("Verification failed", 401));
   }
 
-  // Get the verification helper from system controller
-  const { verifyIdAgainstDummy } = require("./systemController");
-
-  // Verify against dummy database
-  const verificationResult = await verifyIdAgainstDummy(
-    idNumber,
-    firstName,
-    lastName,
-    dateOfBirth
-  );
-
-  if (!verificationResult.verified) {
-    return next(
-      new AppError(`Verification failed: ${verificationResult.reason}`, 400)
-    );
-  }
-
-  // Find and update user
-  const user = await User.findById(req.user._id);
-
+  const user = await User.findOne({
+    userName,
+  });
   if (!user) {
     return next(new AppError("User not found", 404));
   }
-
-  // Update user verification status
   user.isVerified = true;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   res.status(200).json({
     status: "success",
-    message: "User successfully verified",
-    data: {
-      user: {
-        userName: user.userName,
-        isVerified: user.isVerified,
-      },
-    },
+    message: "User verified successfully",
   });
-});
+
+
+ 
+}
+);
 
 /**
  * Register a new user

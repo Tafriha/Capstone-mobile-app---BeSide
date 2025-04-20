@@ -6,11 +6,15 @@ const helmet = require("helmet");
 const xss = require("xss-clean");
 const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
+const dotenv = require("dotenv");
+dotenv.config();
 
 const AppError = require("./utils/AppError");
 const errorHandler = require("./middlewares/errorHandler");
 
 const authRoutes = require("./routes/authRoutes");
+const systemRoutes = require("./routes/systemRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
@@ -55,6 +59,8 @@ app.use(
 
 const baseUrl = "/api/v1";
 app.use(`${baseUrl}/auth`, authRoutes);
+//app.use(`${baseUrl}/system`, systemRoutes);
+app.use(`${baseUrl}/user`, userRoutes);
 
 app.all("*", (req, res, next) => {
   next(new AppError(`Cannot find ${req.originalUrl} on this server!`, 404));

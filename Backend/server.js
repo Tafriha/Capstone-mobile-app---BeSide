@@ -1,6 +1,7 @@
-require("dotenv").config();
 const app = require("./app");
 const connectDb = require("./config/db");
+const dotenv = require("dotenv");
+dotenv.config();
 
 process.on("uncaughtException", (err) => {
   console.error("UNCAUGHT EXCEPTION! 💥 Shutting down...");
