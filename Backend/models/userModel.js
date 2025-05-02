@@ -35,6 +35,13 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
+
+    emailVerificationToken: String,
+    emailVerficationExpires: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+
+
     consentGiven: {
       type: Boolean,
       default: false,
@@ -64,7 +71,8 @@ const UserSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
+
 );
 
 module.exports = mongoose.model("User", UserSchema);
