@@ -57,7 +57,7 @@ export default function VerifyScreen() {
     };
 
     try {
-      const res = await fetch("http://192.168.1.107:5000/api/v1/auth/verify", {
+      const res = await fetch("http://10.0.2.2:5000/api/v1/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -66,9 +66,17 @@ export default function VerifyScreen() {
       const data = await res.json();
 
       if (res.ok) {
+        // Update stored user with isVerified = true
+        const storedUser = await AsyncStorage.getItem("user");
+        const parsedUser = JSON.parse(storedUser);
+        parsedUser.isVerified = true;
+        await AsyncStorage.setItem("user", JSON.stringify(data.data.user));
+      
         Alert.alert("Success", "Verification completed!");
         router.replace("/home");
-      } else {
+      }
+      
+       else {
         Alert.alert("Error", data.message || "Verification failed");
       }
     } catch (err) {

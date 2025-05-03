@@ -13,20 +13,26 @@ export default function LoginScreen() {
       alert("Please enter both username and password");
       return;
     }
-
+  
     try {
-      const response = await fetch("http://192.168.1.107:5000/api/v1/auth/login", {
+      const response = await fetch("http://10.0.2.2:5000/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userName: username, password }),
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok) {
-        await AsyncStorage.setItem("user", JSON.stringify(data.data.user));
-        router.replace("/home");
-
+        const user = data.data.user;
+        await AsyncStorage.setItem("user", JSON.stringify(user));
+  
+        // 🔁 Conditional navigation based on verification
+        if (user.isVerified) {
+          router.replace("/home");
+        } else {
+          router.replace("/verify");
+        }
       } else {
         alert(data.message || "Login failed");
       }
@@ -35,6 +41,7 @@ export default function LoginScreen() {
       console.error(err);
     }
   };
+  
 
   return (
     <View style={styles.container}>
