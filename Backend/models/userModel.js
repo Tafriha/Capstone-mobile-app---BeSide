@@ -1,8 +1,14 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const validator = require("validator");
 
 const UserSchema = new Schema(
   {
+    userId: {
+      type: String,
+      unique: true,
+      required: true,
+    },
     userName: {
       type: String,
       required: [true, "Username is required"],
@@ -15,7 +21,7 @@ const UserSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
+      validate: [validator.isEmail, "Please provide a valid email address"],
     },
     password: {
       type: String,
@@ -23,13 +29,57 @@ const UserSchema = new Schema(
       minlength: 8,
       select: false, // Don't include password in query results by default
     },
+    firstName: {
+      type: String,
+      required: [true, "First name is required"],
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: [true, "Last name is required"],
+      trim: true,
+    },
     mobileNo: {
       type: String,
       required: [true, "Mobile number is required"],
+      validate: {
+        validator: function (v) {
+          return /^[+]?[\d\s-]+$/.test(v);
+        },
+        message: (props) => `${props.value} is not a valid phone number!`,
+      },
+    },
+    // Location information
+    address: {
+      street: { type: String },
+      city: { type: String },
+      state: { type: String },
+      postalCode: { type: String },
+      country: {
+        type: String,
+        required: [true, "Country is required"],
+      },
+      countryCode: {
+        type: String,
+        required: [true, "Country code is required"],
+        uppercase: true,
+        minlength: 2,
+        maxlength: 3,
+      },
     },
     profilePhoto: {
-      type: String,
-      default: "default.jpg",
+      url: {
+        type: String,
+        default: "https://via.placeholder.com/150",
+      },
+      filename: {
+        type: String,
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+      },
     },
     isVerified: {
       type: Boolean,
@@ -61,10 +111,31 @@ const UserSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    accountStatus: {
+      type: String,
+      enum: ["active", "suspended", "deactivated"],
+      default: "active",
+    },
+    bio: {
+      type: String,
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Pre-save hook to update lastUpdated field
+UserSchema.pre("save", function (next) {
+  this.lastUpdated = Date.now();
+  next();
+});
+
+// Pre-update hooks to update lastUpdated field
+UserSchema.pre(["updateOne", "findOneAndUpdate"], function (next) {
+  this.set({ lastUpdated: Date.now() });
+  next();
+});
 
 module.exports = mongoose.model("User", UserSchema);

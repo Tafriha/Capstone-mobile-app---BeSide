@@ -5,20 +5,28 @@ const bcrypt = require("bcrypt");
 const AppError = require("../utils/AppError");
 const { promisify } = require("util");
 const passwordHash = require("../utils/passwordHash");
+const generateUserId = require("../utils/generateUserId");
 const { default: mongoose } = require("mongoose");
-const dummyVerification = mongoose.models.dummyVerification || mongoose.model("dummyVerification", new mongoose.Schema({
-  firstName: String,
-  lastName: String,
-  wwcc: {
-    number: String,
-    expiryDate: String,
-  },
-  license: {
-    number: String,
-    expiryDate: String,
-  },
-  dob: String,
-}));
+
+// Create a dummy verification model for testing
+const dummyVerification =
+  mongoose.models.dummyVerification ||
+  mongoose.model(
+    "dummyVerification",
+    new mongoose.Schema({
+      firstName: String,
+      lastName: String,
+      wwcc: {
+        number: String,
+        expiryDate: String,
+      },
+      license: {
+        number: String,
+        expiryDate: String,
+      },
+      dob: String,
+    })
+  );
 
 /**
  * Generate JWT token
@@ -37,7 +45,7 @@ const signToken = (id) => {
  * @param {number} statusCode - HTTP status code
  * @param {Object} res - Express response object
  */
-exports.createSendToken = (user, statusCode, res) => {
+const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
 
   const cookieOptions = {
@@ -86,7 +94,7 @@ exports.login = catchAsync(async (req, res, next) => {
   }
 
   // Send token
-  this.createSendToken(user, 200, res);
+  createSendToken(user, 200, res);
 });
 
 /**
@@ -120,8 +128,31 @@ exports.logout = catchAsync(async (req, res, next) => {
  * Verify user ID
  */
 exports.verifyUser = catchAsync(async (req, res, next) => {
-  const { userName, verificationIdType, firstName, lastName, number, expiry, dob } = req.body;
+  const {
+    userName,
+    verificationIdType,
+    firstName,
+    lastName,
+    number,
+    expiry,
+    dob,
+  } = req.body;
+
+  // Validate required fields
+  if (
+    !userName ||
+    !verificationIdType ||
+    !firstName ||
+    !lastName ||
+    !number ||
+    !expiry ||
+    !dob
+  ) {
+    return next(new AppError("All verification fields are required", 400));
+  }
+
   let record = null;
+
   if (verificationIdType === "wwcc") {
     record = await dummyVerification.findOne({
       firstName,
@@ -142,7 +173,10 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
       },
       dob: dob,
     });
+  } else {
+    return next(new AppError("Invalid verification ID type", 400));
   }
+
   if (!record) {
     return next(new AppError("Verification failed", 401));
   }
@@ -150,9 +184,11 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
   const user = await User.findOne({
     userName,
   });
+
   if (!user) {
     return next(new AppError("User not found", 404));
   }
+
   user.isVerified = true;
   await user.save({ validateBeforeSave: false });
 
@@ -160,18 +196,39 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
     status: "success",
     message: "User verified successfully",
   });
-
-
- 
-}
-);
+});
 
 /**
  * Register a new user
- * @route POST /api/v1/user/register
+ * @route POST /api/v1/auth/register
  */
 exports.registerUser = catchAsync(async (req, res, next) => {
-  const { userName, email, mobileNo, password } = req.body;
+  const {
+    userName,
+    email,
+    mobileNo,
+    password,
+    firstName,
+    lastName,
+    address = {},
+  } = req.body;
+
+  // Check required fields
+  if (
+    !userName ||
+    !email ||
+    !mobileNo ||
+    !password ||
+    !firstName ||
+    !lastName
+  ) {
+    return next(new AppError("Please provide all required fields", 400));
+  }
+
+  // Check if country and country code are provided
+  if (!address.country || !address.countryCode) {
+    return next(new AppError("Country and country code are required", 400));
+  }
 
   // Check if user already exists
   const userExists = await User.findOne({
@@ -187,16 +244,32 @@ exports.registerUser = catchAsync(async (req, res, next) => {
   // Hash password
   const hashedPassword = await passwordHash(password);
 
-  // Create user
-  const user = await User.create({
+  // Prepare user data including location information
+  const userData = {
     userName,
     email,
     password: hashedPassword,
     mobileNo,
-  });
+    firstName,
+    lastName,
+    address: {
+      street: address.street || "",
+      city: address.city || "",
+      state: address.state || "",
+      postalCode: address.postalCode || "",
+      country: address.country,
+      countryCode: address.countryCode,
+    },
+  };
+
+  // Generate unique user ID
+  userData.userId = generateUserId(userData);
+
+  // Create user
+  const user = await User.create(userData);
 
   // Generate and send JWT token
-  this.createSendToken(user, 201, res);
+  createSendToken(user, 201, res);
 });
 
 /**
@@ -254,13 +327,52 @@ exports.restrictTo = (...roles) => {
  * Send password reset email
  */
 exports.forgotPassword = catchAsync(async (req, res, next) => {
-  // Implementation would include:
-  // 1. Find user by email
-  // 2. Generate reset token
-  // 3. Send email with reset link
+  const { email } = req.body;
+
+  if (!email) {
+    return next(new AppError("Please provide your email address", 400));
+  }
+
+  // Check if user exists
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return next(new AppError("There is no user with this email address", 404));
+  }
+
+  // In a real application, you would:
+  // 1. Generate a reset token
+  // 2. Save it to the user document
+  // 3. Send an email with the reset link
+
+  // For now, we're just sending a success response
+  res.status(200).json({
+    status: "success",
+    message: "Password reset email has been sent. Please check your inbox.",
+  });
+});
+
+/**
+ * Reset password
+ */
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return next(new AppError("Token and new password are required", 400));
+  }
+
+  // In a real implementation:
+  // 1. Verify the reset token
+  // 2. Check if token is expired
+  // 3. Update the user's password
+  // 4. Remove the reset token
 
   res.status(200).json({
     status: "success",
-    message: "Password reset email sent",
+    message: "Password has been reset successfully",
   });
 });
+
+// Make createSendToken available for other modules
+exports.createSendToken = createSendToken;
