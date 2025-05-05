@@ -2,7 +2,7 @@ const nodemailer= require ("nodemailer");
 class EmailService {
   constructor() {
     const host = process.env.EMAIL_HOST || "smtp.example.com";
-    const port = parseInt(process.env.EMAIL_PORT, 10) || 587;
+    const port = parseInt(process.env.EMAIL_PORT) || 587;
     const user = process.env.EMAIL_USERNAME || "";
     const pass = process.env.EMAIL_PASSWORD || "";
 
