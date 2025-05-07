@@ -8,70 +8,91 @@ const catchAsync = require("../utils/catchAsync");
 exports.createTripReq = catchAsync(async (req, res, next) => {
   const { user, destination, destinationType, date, time, genderPreference } = req.body;
 
-    const tripReqId = user.username.slice(0, 3).toUpperCase() + Date.now(); // Generate a unique trip request ID
+  exports.createTripReq = catchAsync(async (req, res, next) => {
+    const { user, destination, destinationType, date, time, genderPreference } = req.body;
+  
+    if (!user || !user.userName) {
+      return next(new AppError("User name is required", 400));
+    }
+  
+    // Find user by userName
+    const existingUser = await User.findOne({ userName: user.userName });
+    if (!existingUser) {
+      return next(new AppError("User not found", 404));
+    }
+  
+    // Generate trip request ID
+    const tripReqId = existingUser.userName.slice(0, 3).toUpperCase() + Date.now();
+  
+    // Create new TripRequest using full user data
+    const newTripRequest = await TripRequest.create({
+      tripReqId,
+      user: {
+        userId: existingUser._id.toString(), // Inject required field
+        userName: existingUser.userName,
+        userImage: existingUser.profilePhoto || "default.jpg"
+      },
+      destination,
+      destinationType,
+      date,
+      time,
+      genderPreference
+    });
+  
+    res.status(201).json({
+      status: "success",
+      data: {
+        tripRequest: newTripRequest,
+      },
+    });
+  });  
+}
+);
 
-  // Check if the user exists
-  const existingUser = await User.findById(user.userId);
-  if (!existingUser) {
-    return next(new AppError("User not found", 404));
+exports.createTrip = catchAsync(async (req, res, next) => {
+  const { user, companion, consent, distanceMaintained, distancePreferred, genderPreference, imageVerification } = req.body;
+
+  if (!user?.userName || !companion?.userName) {
+    return next(new AppError("Both user and companion usernames are required", 400));
   }
 
-  // Create a new trip request
-  const newTripRequest = await TripRequest.create({
-    tripReqId,
-    user,
-    destination,
-    destinationType,
-    date,
-    time,
+  // Find user and companion by username
+  const existingUser = await User.findOne({ userName: user.userName });
+  if (!existingUser) return next(new AppError("User not found", 404));
+
+  const existingCompanion = await User.findOne({ userName: companion.userName });
+  if (!existingCompanion) return next(new AppError("Companion not found", 404));
+
+  // Generate unique trip ID
+  const tripId = existingUser.userName.slice(0, 3).toUpperCase() + existingCompanion.userName.slice(0, 3).toUpperCase() + Date.now();
+
+  // Create trip
+  const newTrip = await Trip.create({
+    tripId,
+    user: {
+      userId: existingUser._id.toString(),
+      userName: existingUser.userName,
+      userImage: existingUser.profilePhoto || "default.jpg"
+    },
+    companion: {
+      userId: existingCompanion._id.toString(),
+      userName: existingCompanion.userName,
+      userImage: existingCompanion.profilePhoto || "default.jpg"
+    },
+    consent,
+    distanceMaintained,
+    distancePreferred,
     genderPreference,
+    imageVerification
   });
 
   res.status(201).json({
     status: "success",
     data: {
-      tripRequest: newTripRequest,
-    },
+      trip: newTrip
+    }
   });
-}
-);
-
-exports.createTrip = catchAsync(async (req, res, next) => {
-    const { user, companion, consent, distanceMaintained, distancePreferred, genderPreference } = req.body;
-
-    const tripId = user.username.slice(0, 3).toUpperCase() + companion.username.slice(0, 3).toUpperCase() + Date.now(); // Generate a unique trip ID
-
-    // Check if the user exists
-    const existingUser = await User.findById(user.userId);
-    if (!existingUser) {
-        return next(new AppError("User not found", 404));
-    }
-
-    // Check if the companion exists
-    const existingCompanion = await User.findById(companion.userId);
-    if (!existingCompanion) {
-        return next(new AppError("Companion not found", 404));
-    }
-
-    // Create a new trip
-    const newTrip = await Trip.create({
-        tripId,
-        user,
-        companion,
-        consent,
-        distanceMaintained,
-        distancePreferred,
-        genderPreference,
-    });
-
-    res.status(201).json({
-        status: "success",
-        data: {
-            trip: newTrip,
-        },
-    });
-}
-);
+});
 
 exports.getTripReq = catchAsync(async (req, res, next) => {
     const { tripReqId } = req.body;
