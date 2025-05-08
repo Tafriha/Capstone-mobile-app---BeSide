@@ -66,18 +66,19 @@ export default function VerifyScreen() {
 
       const data = await res.json();
 
-      if (res.ok) {
-        // Update stored user with isVerified = true
-        const storedUser = await AsyncStorage.getItem("user");
-        const parsedUser = JSON.parse(storedUser);
-        parsedUser.isVerified = true;
-        await AsyncStorage.setItem("user", JSON.stringify(data.data.user));
-      
+      if (res.ok && data?.data?.user) {
+        console.log("Verification response:", data);
+        const updatedUser = data.data.user;
+
+        // Mark as verified
+        updatedUser.isVerified = true;
+
+        // Save to storage
+        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
         Alert.alert("Success", "Verification completed!");
         router.replace("/home");
-      }
-      
-       else {
+      } else {
         Alert.alert("Error", data.message || "Verification failed");
       }
     } catch (err) {

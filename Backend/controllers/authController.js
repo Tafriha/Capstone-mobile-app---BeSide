@@ -138,7 +138,6 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
     dob,
   } = req.body;
 
-  // Validate required fields
   if (
     !userName ||
     !verificationIdType ||
@@ -151,39 +150,21 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
     return next(new AppError("All verification fields are required", 400));
   }
 
-  let record = null;
+  const query = {
+    firstName: new RegExp(`^${firstName.trim()}$`, "i"),
+    lastName: new RegExp(`^${lastName.trim()}$`, "i"),
+    dob: dob.trim(),
+    [`${verificationIdType}.number`]: number.trim(),
+    [`${verificationIdType}.expiryDate`]: expiry.trim()
+  };
 
-  if (verificationIdType === "wwcc") {
-    record = await dummyVerification.findOne({
-      firstName,
-      lastName,
-      wwcc: {
-        number,
-        expiryDate: expiry,
-      },
-      dob: dob,
-    });
-  } else if (verificationIdType === "license") {
-    record = await dummyVerification.findOne({
-      firstName,
-      lastName,
-      license: {
-        number,
-        expiryDate: expiry,
-      },
-      dob: dob,
-    });
-  } else {
-    return next(new AppError("Invalid verification ID type", 400));
-  }
+  const record = await dummyVerification.findOne(query);
 
   if (!record) {
     return next(new AppError("Verification failed", 401));
   }
 
-  const user = await User.findOne({
-    userName,
-  });
+  const user = await User.findOne({ userName });
 
   if (!user) {
     return next(new AppError("User not found", 404));
@@ -194,9 +175,12 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    message: "User verified successfully",
+    data: {
+      user,
+    },
   });
 });
+
 
 /**
  * Register a new user
