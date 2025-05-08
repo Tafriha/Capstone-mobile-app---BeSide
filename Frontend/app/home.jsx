@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,34 +7,83 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Callout } from "react-native-maps";
+import { useFocusEffect } from "@react-navigation/native";
+import { Typography } from "../constants/Typography";
+import { Colors } from "../constants/Colors";
+import * as Location from "expo-location";
 
 const { width } = Dimensions.get("window");
 
+const customMapStyle = [
+  {
+    elementType: "geometry",
+    stylers: [{ color: "#f5f5f5" }],
+  },
+  {
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#616161" }],
+  },
+  {
+    featureType: "water",
+    stylers: [{ color: "#c9c9c9" }],
+  },
+];
+
 export default function HomeScreen() {
   const router = useRouter();
+  
   const [user, setUser] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
 
-  useEffect(() => {
-    const focusListener = router.addListener("focus", async () => {
-      const stored = await AsyncStorage.getItem("user");
-      if (stored) {
-        setUser(JSON.parse(stored));
-      } else {
-        router.replace("/login"); // if no user, go to login
-      }
-    });
-  
-    return () => {
-      focusListener.remove();
-    };
-  }, [router]);
-  
+  useFocusEffect(
+    useCallback(() => {
+      const checkUserAndLocation = async () => {
+        const stored = await AsyncStorage.getItem("user");
+        if (stored) {
+          setUser(JSON.parse(stored));
+        } else {
+          router.replace("/login");
+        }
+
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          alert("Permission to access location was denied");
+          return;
+        }
+
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Highest,
+          });
+
+          const coords = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          };
+
+          setCurrentLocation(coords);
+        } catch (error) {
+          setCurrentLocation({
+            latitude: -37.8136,
+            longitude: 144.9631,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+        }
+      };
+
+      checkUserAndLocation();
+    }, [])
+  );
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("user");
@@ -42,11 +91,7 @@ export default function HomeScreen() {
   };
 
   const handleCompanion = () => {
-    if (user?.isVerified) {
-      setModalVisible(true); // Can show success modal later if needed
-    } else {
-      setModalVisible(true); // Show verification modal
-    }
+    setModalVisible(true);
   };
 
   const handleVerifyRedirect = () => {
@@ -80,17 +125,25 @@ export default function HomeScreen() {
           onPress={() => setMenuVisible(false)}
         >
           <View style={styles.menuContainer}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => {}}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                router.push("/profile");
+              }}
+            >
               <Text style={styles.menuText}>Account</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-              <Text style={[styles.menuText, { color: "red" }]}>Logout</Text>
+              <Text style={[styles.menuText, { color: Colors.light.danger }]}>
+                Logout
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Custom Pop-up Modal */}
+      {/* Verification Modal */}
       <Modal
         animationType="slide"
         transparent
@@ -115,21 +168,25 @@ export default function HomeScreen() {
 
       {/* Map View */}
       <View style={styles.mapContainer}>
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: -37.8136,
-            longitude: 144.9631,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-        >
-          <Marker
-            coordinate={{ latitude: -37.8136, longitude: 144.9631 }}
-            title="You are here"
-            pinColor="#9B5377"
-          />
-        </MapView>
+        {currentLocation && (
+          <MapView
+            customMapStyle={customMapStyle}
+            mapType="standard"
+            style={styles.map}
+            showsUserLocation={true}
+            followsUserLocation={true}
+            region={currentLocation}
+          >
+            <Marker coordinate={currentLocation}>
+              <Callout>
+                <View style={{ width: 150 }}>
+                  <Text style={{ fontWeight: "bold" }}>You are here</Text>
+                  <Text>Live location from device</Text>
+                </View>
+              </Callout>
+            </Marker>
+          </MapView>
+        )}
       </View>
 
       {/* Find Companion Button */}
@@ -143,7 +200,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.light.background,
     paddingTop: 50,
     paddingHorizontal: 20,
   },
@@ -158,13 +215,12 @@ const styles = StyleSheet.create({
     height: 40,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#9B5377",
+    ...Typography.heading,
+    color: Colors.light.primary,
   },
   menuIcon: {
     fontSize: 26,
-    color: "#9B5377",
+    color: Colors.light.text,
   },
   menuOverlay: {
     flex: 1,
@@ -176,7 +232,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     width: 150,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.light.surface,
     borderRadius: 10,
     paddingVertical: 10,
     shadowColor: "#000",
@@ -189,8 +245,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   menuText: {
-    fontSize: 16,
-    color: "#333",
+    ...Typography.body,
+    color: Colors.light.text,
   },
   mapContainer: {
     flex: 1,
@@ -203,15 +259,15 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   button: {
-    backgroundColor: "#9B5377",
+    backgroundColor: Colors.light.primary,
     paddingVertical: 14,
     borderRadius: 25,
     alignItems: "center",
     marginBottom: 30,
   },
   buttonText: {
+    ...Typography.body,
     color: "#fff",
-    fontSize: 18,
     fontWeight: "bold",
   },
   popupContainer: {
@@ -221,33 +277,32 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   popupBox: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.light.surface,
     borderRadius: 10,
     padding: 25,
     alignItems: "center",
     width: width * 0.8,
   },
   popupTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#9B5377",
+    ...Typography.subheading,
+    color: Colors.light.primary,
     marginBottom: 10,
   },
   popupMessage: {
-    fontSize: 16,
-    color: "#333",
+    ...Typography.body,
+    color: Colors.light.text,
     textAlign: "center",
     marginBottom: 20,
   },
   verifyButton: {
-    backgroundColor: "#9B5377",
+    backgroundColor: Colors.light.accent,
     paddingVertical: 10,
     paddingHorizontal: 30,
     borderRadius: 20,
   },
   verifyButtonText: {
+    ...Typography.body,
     color: "#fff",
-    fontSize: 16,
     fontWeight: "bold",
   },
 });

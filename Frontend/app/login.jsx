@@ -1,7 +1,14 @@
+// /Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/app/login.jsx
 import React, { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { router } from "expo-router";
 
 export default function LoginScreen() {
@@ -13,21 +20,23 @@ export default function LoginScreen() {
       alert("Please enter both username and password");
       return;
     }
-  
+
     try {
-      const response = await fetch("http://10.0.2.2:5000/api/v1/auth/login", {
+      const response = await fetch("http://10.0.2.2:5001/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userName: username, password }),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         const user = data.data.user;
+
+        // ✅ Store user info and token
         await AsyncStorage.setItem("user", JSON.stringify(user));
-  
-        // 🔁 Conditional navigation based on verification
+        await AsyncStorage.setItem("token", data.token); // 🔐 Secure future API access
+
         if (user.isVerified) {
           router.replace("/home");
         } else {
@@ -41,7 +50,6 @@ export default function LoginScreen() {
       console.error(err);
     }
   };
-  
 
   return (
     <View style={styles.container}>

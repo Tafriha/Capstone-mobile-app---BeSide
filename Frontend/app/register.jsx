@@ -1,5 +1,12 @@
+// /Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/app/register.jsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { router } from "expo-router";
 
 export default function RegisterScreen() {
@@ -15,7 +22,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      const response = await fetch("http:/10.0.2.2:5000/api/v1/auth/register", {
+      const response = await fetch("http:/10.0.2.2:5001/api/v1/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -30,8 +37,8 @@ export default function RegisterScreen() {
 
       if (response.ok) {
         alert("Registration successful!");
+        await AsyncStorage.setItem("token", data.token); // (optional if token is returned)
         router.replace("/login");
-
 
       } else {
         alert(data.message || "Registration failed");
@@ -90,10 +97,7 @@ export default function RegisterScreen() {
       <View style={styles.footerTextContainer}>
         <Text style={styles.footerText}>
           Already have an account?{" "}
-          <Text
-            style={styles.footerLink}
-            onPress={() => router.push("/login")}
-          >
+          <Text style={styles.footerLink} onPress={() => router.push("/login")}>
             Login
           </Text>
         </Text>

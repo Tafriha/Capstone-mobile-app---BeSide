@@ -1,3 +1,4 @@
+// /Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/app/verify.jsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -57,7 +58,7 @@ export default function VerifyScreen() {
     };
 
     try {
-      const res = await fetch("http://10.0.2.2:5000/api/v1/auth/verify", {
+      const res = await fetch("http://10.0.2.2:5001/api/v1/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

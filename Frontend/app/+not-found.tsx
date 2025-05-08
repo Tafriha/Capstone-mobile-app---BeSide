@@ -1,3 +1,4 @@
+// /Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/app/+not-found.tsx
 import { Link, Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
