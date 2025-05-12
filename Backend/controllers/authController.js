@@ -359,3 +359,66 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 }
 );
 
+/**
+ * Verify email address
+ */
+exports.sendVerificationEmail = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    return next(new AppError("Please provide an email address", 400));
+  }
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new AppError("No user found with this email address", 404));
+  }
+  const verificationToken = tokenUtils.generateToken();
+  const hashedToken = tokenUtils.hashToken(verificationToken);
+  const tokenExpiry = Date.now() + 10 * 60 * 1000; // Token valid for 10 minutes
+  user.emailVerificationToken = hashedToken;
+  user.emailVerificationExpires = tokenExpiry;
+  await user.save({ validateBeforeSave: false });
+  try {
+    await emailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+      user.userName
+    );
+  } catch (error) {
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(
+      new AppError("There was an error sending the email. Try again later.", 500)
+    );
+  }
+  res.status(200).json({
+    status: "success",
+    message: "Verification email sent",
+  });
+}
+);
+
+/**
+ * Verify email address using token
+ */
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  const { token } = req.params;
+  const hashedToken = tokenUtils.hashToken(token);
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+  user.emailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save();
+  res.status(200).json({
+    status: "success",
+    message: "Email verified successfully",
+  });
+}
+);
+

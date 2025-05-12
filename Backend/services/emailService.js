@@ -1,10 +1,11 @@
 const nodemailer= require ("nodemailer");
 class EmailService {
   constructor() {
-    const host = process.env.EMAIL_HOST || "smtp.example.com";
-    const port = parseInt(process.env.EMAIL_PORT) || 587;
-    const user = process.env.EMAIL_USERNAME || "";
-    const pass = process.env.EMAIL_PASSWORD || "";
+    const host = process.env.EMAIL_HOST;
+    const port = parseInt(process.env.EMAIL_PORT, 10);
+    const user = process.env.EMAIL_USERNAME;
+    const pass = process.env.EMAIL_PASSWORD;
+    const from = process.env.EMAIL_FROM;
 
     if (!host || !port || !user || !pass) {
         throw new Error("Email configuration is missing. Please check your environment variables.");
@@ -20,7 +21,6 @@ class EmailService {
         pass,
       },
 
-      authMethod: "PLAIN",
       tls: {
         rejectUnauthorized: false, // Allow self-signed certificates
       },
@@ -29,10 +29,10 @@ class EmailService {
 
   }
 
-  async sendEmail({email, subject, html, text}){
+  async sendEmail({email, subject, text, html}){
     try {
         const mailOptions = {
-            from: process.env.EMAIL_FROM,
+            from: '"Beside", barshamahbuba@gmail.com',
             to: email,
             subject: subject,
             text: text,
@@ -67,8 +67,8 @@ class EmailService {
     return this.sendEmail({
       email,
       subject: "Password Reset",
-      html,
       text,
+      html,
     });
   }
 
@@ -80,8 +80,8 @@ class EmailService {
     return this.sendEmail({
       email,
       subject: "Email Verification",
-      html,
       text,
+      html,
     });
   }
 }

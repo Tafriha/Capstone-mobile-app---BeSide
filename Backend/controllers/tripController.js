@@ -5,9 +5,6 @@ const TripRequest = require("../models/tripRequestModel");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 
-exports.createTripReq = catchAsync(async (req, res, next) => {
-  const { user, destination, destinationType, date, time, genderPreference } = req.body;
-
   exports.createTripReq = catchAsync(async (req, res, next) => {
     const { user, destination, destinationType, date, time, genderPreference } = req.body;
   
@@ -46,9 +43,8 @@ exports.createTripReq = catchAsync(async (req, res, next) => {
       },
     });
   });  
-}
-);
 
+  
 exports.createTrip = catchAsync(async (req, res, next) => {
   const { user, companion, consent, distanceMaintained, distancePreferred, genderPreference, imageVerification } = req.body;
 

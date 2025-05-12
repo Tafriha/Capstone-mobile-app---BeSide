@@ -40,6 +40,10 @@ const UserSchema = new Schema(
     emailVerficationExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
 
 
     consentGiven: {
