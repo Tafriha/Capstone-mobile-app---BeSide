@@ -85,6 +85,17 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
+
+    emailVerificationToken: String,
+    emailVerficationExpires: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+
     consentGiven: {
       type: Boolean,
       default: false,
@@ -123,7 +134,8 @@ const UserSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
+
 );
 
 // Pre-save hook to update lastUpdated field

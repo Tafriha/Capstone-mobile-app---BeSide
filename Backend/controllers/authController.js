@@ -9,6 +9,9 @@ const generateUserId = require("../utils/generateUserId");
 const { default: mongoose } = require("mongoose");
 
 // Create a dummy verification model for testing
+const tokenUtils = require("../utils/tokenUtils");
+const emailService = require("../services/emailService");
+
 const dummyVerification =
   mongoose.models.dummyVerification ||
   mongoose.model(
@@ -225,6 +228,18 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     );
   }
 
+    // Password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return next(
+        new AppError(
+          "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character",
+          400
+        )
+      );
+    }
+  
+
   // Hash password
   const hashedPassword = await passwordHash(password);
 
@@ -312,45 +327,37 @@ exports.restrictTo = (...roles) => {
  */
 exports.forgotPassword = catchAsync(async (req, res, next) => {
   const { email } = req.body;
-
   if (!email) {
-    return next(new AppError("Please provide your email address", 400));
+    return next(new AppError("Please provide an email address", 400));
   }
-
-  // Check if user exists
   const user = await User.findOne({ email });
-
   if (!user) {
-    return next(new AppError("There is no user with this email address", 404));
+    return next(new AppError("No user found with this email address", 404));
+  }
+  const resetToken = tokenUtils.generateToken();
+  const hashedToken = tokenUtils.hashToken(resetToken);
+  const tokenExpiry= Date.now() + 10 * 60 * 1000; // Token valid for 10 minutes
+  user.passwordResetToken = hashedToken;
+  user.passwordResetExpires = tokenExpiry;
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await emailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      user.userName
+    );
   }
 
-  // In a real application, you would:
-  // 1. Generate a reset token
-  // 2. Save it to the user document
-  // 3. Send an email with the reset link
-
-  // For now, we're just sending a success response
-  res.status(200).json({
-    status: "success",
-    message: "Password reset email has been sent. Please check your inbox.",
-  });
-});
-
-/**
- * Reset password
- */
-exports.resetPassword = catchAsync(async (req, res, next) => {
-  const { token, password } = req.body;
-
-  if (!token || !password) {
-    return next(new AppError("Token and new password are required", 400));
+  catch (error) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(
+      new AppError("There was an error sending the email. Try again later.", 500)
+    );
   }
 
-  // In a real implementation:
-  // 1. Verify the reset token
-  // 2. Check if token is expired
-  // 3. Update the user's password
-  // 4. Remove the reset token
 
   res.status(200).json({
     status: "success",
@@ -358,5 +365,117 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   });
 });
 
-// Make createSendToken available for other modules
-exports.createSendToken = createSendToken;
+
+function createTokenResponse(user) {
+  const token = signToken(user._id);
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+  };
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.secure = true;
+  }
+  user.password = undefined; // Remove password from user object
+
+  return { token, cookieOptions, user };
+};
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const {token}= req.params;
+  const { password, confirmPassword } = req.body;
+  if (!password || !confirmPassword) {
+    return next(new AppError("Please provide a password and confirm password", 400));
+  }
+  if (password !== confirmPassword) {
+    return next(new AppError("Passwords do not match", 400));
+  }
+  const hashedToken = tokenUtils.hashToken(token);
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+  user.password = passwordHash(password);
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+  
+  const tokenResponse = createTokenResponse(user);
+  res.cookie("jwt", tokenResponse.token, tokenResponse.cookieOptions);
+  res.status(200).json({
+    status: "success",
+    token: tokenResponse.token,
+    data: {
+      user: tokenResponse.user,
+    },
+  });
+}
+);
+
+/**
+ * Verify email address
+ */
+exports.sendVerificationEmail = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    return next(new AppError("Please provide an email address", 400));
+  }
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new AppError("No user found with this email address", 404));
+  }
+  const verificationToken = tokenUtils.generateToken();
+  const hashedToken = tokenUtils.hashToken(verificationToken);
+  const tokenExpiry = Date.now() + 10 * 60 * 1000; // Token valid for 10 minutes
+  user.emailVerificationToken = hashedToken;
+  user.emailVerificationExpires = tokenExpiry;
+  await user.save({ validateBeforeSave: false });
+  try {
+    await emailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+      user.userName
+    );
+  } catch (error) {
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(
+      new AppError("There was an error sending the email. Try again later.", 500)
+    );
+  }
+  res.status(200).json({
+    status: "success",
+    message: "Verification email sent",
+  });
+}
+);
+
+/**
+ * Verify email address using token
+ */
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  const { token } = req.params;
+  const hashedToken = tokenUtils.hashToken(token);
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+  user.emailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save();
+  res.status(200).json({
+    status: "success",
+    message: "Email verified successfully",
+  });
+}
+);
+
