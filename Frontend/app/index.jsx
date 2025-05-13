@@ -1,36 +1,65 @@
-import React from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, StyleSheet, Animated, Dimensions, Platform } from "react-native";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedButton } from "@/components/ThemedButton";
+import { Typography } from "@/constants/Typography";
+
+const { height } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
+  const background = useThemeColor({}, "background");
+  const surface = useThemeColor({}, "surface");
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1200,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
     <View style={styles.mainContainer}>
-      <View style={styles.container}>
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-        />
-        <Text style={styles.title}>Beside</Text>
-        <Text style={styles.subtitle}>With You Every Mile, Every Moment</Text>
+      <LinearGradient
+        colors={["#FFF0EB", "#FAD4C0", "#EBB7AD"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        <ThemedText style={Typography.title}>BeSide</ThemedText>
+
+        <ThemedText style={[Typography.subtitle, styles.subtitle]}>
+          With You Every Mile, Every Moment
+        </ThemedText>
 
         <View style={styles.buttonWrapper}>
-          <TouchableOpacity
-            style={[styles.button, styles.loginButton]}
+          <ThemedButton
+            title="Login"
+            type="primary"
             onPress={() => router.push("/login")}
-          >
-            <Text style={[styles.buttonText, styles.loginText]}>Login</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.registerButton]}
+            style={styles.button}
+          />
+          <ThemedButton
+            title="Register"
+            type="outline"
             onPress={() => router.push("/register")}
-          >
-            <Text style={[styles.buttonText, styles.registerText]}>Register</Text>
-          </TouchableOpacity>
+            style={styles.button}
+          />
         </View>
-      </View>
+
+        <ThemedText style={[Typography.caption, styles.reassurance]}>
+          Your privacy is respected. Your safety is our priority.
+        </ThemedText>
+      </Animated.View>
     </View>
   );
 }
@@ -38,62 +67,44 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: "#fff",
+    position: "relative",
   },
-  container: {
+  content: {
     flex: 1,
+    marginTop: Platform.OS === "android" ? 60 : 100,
+    marginBottom: 40,
+    marginHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#9B5377",
-    borderBottomLeftRadius: 100,
-    borderBottomRightRadius: 100,
-    paddingHorizontal: 20,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 36,
-    color: "#fff",
-    fontWeight: "bold",
-    marginBottom: 10,
   },
   subtitle: {
-    fontSize: 16,
-    color: "white",
+    marginTop: 15,
+    marginBottom: 15,
     textAlign: "center",
-    marginBottom: 40,
+  },
+  description: {
+    textAlign: "center",
+    marginTop: 18,
+    marginBottom: 18,
+    paddingHorizontal: 8,
+    maxWidth: 320,
+    lineHeight: 22,
+  },
+  reassurance: {
+    marginTop: 24,
+    marginBottom: 12,
+    opacity: 0.7,
+    textAlign: "center",
+    fontStyle: "italic",
   },
   buttonWrapper: {
     width: "100%",
     alignItems: "center",
   },
   button: {
-    width: 260,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: 10,
-  },
-  loginButton: {
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#9B5377",
-  },
-  registerButton: {
-    backgroundColor: "#73475b",
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  loginText: {
-    color: "#9B5377",
-  },
-  registerText: {
-    color: "#fff",
+    width: "80%",
+    marginVertical: 8,
   },
 });

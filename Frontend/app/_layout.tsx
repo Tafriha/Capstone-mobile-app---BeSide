@@ -5,27 +5,30 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
-
 import { useColorScheme } from "@/hooks/useColorScheme";
 
-// Prevent splash screen from hiding before assets are loaded
+// Prevent splash from hiding early
 SplashScreen.preventAutoHideAsync();
 
+// Import base theme colors (optional: centralize further)
 import {
   DefaultTheme as NavigationDefaultTheme,
   DarkTheme as NavigationDarkTheme,
 } from "@react-navigation/native";
 
+// Theme color config (based on your chosen palette)
 const MyLightTheme = {
   ...NavigationDefaultTheme,
   colors: {
     ...NavigationDefaultTheme.colors,
-    background: "#FFFF82", // Light background
-    card: "#F5F7DC", // Surface color
-    primary: "#B5D99C", // Button/CTA
-    text: "#0F0326", // Text color
-    border: "#ccc",
-    notification: "#E65F5C", // Danger/alerts
+    background: "#FBE6DA", // App background
+    primary: "#2DB5A9", // Primary CTA
+    secondary: "#8BE4DB", // Secondary CTA
+    accent: "#EBB7AD", // Supportive pink
+    info: "#659B5E", // Success/Info
+    text: "#282C3E", // High contrast
+    border: "#DDDBe5", // Form borders, tabs
+    notification: "#77141F", // Error/Alert
   },
 };
 
@@ -33,31 +36,31 @@ const MyDarkTheme = {
   ...NavigationDarkTheme,
   colors: {
     ...NavigationDarkTheme.colors,
-    background: "#0F0326", // Dark background
-    card: "#1A1A2E", // Surface color
-    primary: "#E65F5C", // Button/CTA
-    text: "#F5F7DC", // Text color
-    border: "#444",
-    notification: "#B5D99C", // Accent
+    background: "#282C3E",
+    primary: "#8BE4DB",
+    secondary: "#2DB5A9",
+    accent: "#EBB7AD",
+    info: "#2EC4B6",
+    text: "#FBE6DA",
+    border: "#38231A",
+    notification: "#77141F",
   },
 };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  const [loaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
   useEffect(() => {
-    if (loaded) {
+    if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded]);
 
-  if (!loaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? MyDarkTheme : MyLightTheme}>
@@ -65,7 +68,15 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="auto" />
+
+      <StatusBar
+        style={colorScheme === "dark" ? "light" : "dark"}
+        backgroundColor={
+          colorScheme === "dark"
+            ? MyDarkTheme.colors.background
+            : MyLightTheme.colors.background
+        }
+      />
     </ThemeProvider>
   );
 }
