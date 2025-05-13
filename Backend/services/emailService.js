@@ -49,7 +49,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(email,resetToken,username){
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL}resetPassword/${resetToken}`;
     const html= `<p>Hello ${username},</p><p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`;
     const text = `Hello ${username},\n\nClick the following link to reset your password: ${resetUrl}`;
     console.log (`
