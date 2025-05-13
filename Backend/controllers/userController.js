@@ -16,8 +16,13 @@ exports.saveProfilePhoto = catchAsync(async (req, res, next) => {
   
   console.log(`File received: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
   
-  try {
-    const user = await User.findById(req.user._id);
+    try {
+      console.log("DEBUG START: profile photo upload");
+  console.log("Request User ID:", req.user._id);
+
+  const user = await User.findById(req.user._id);
+  console.log("Loaded User:", user.userName, "userId:", user.userId, "_id:", user._id);
+
     
     if (!user) {
       console.error(`User not found: ${req.user._id}`);
@@ -41,12 +46,17 @@ exports.saveProfilePhoto = catchAsync(async (req, res, next) => {
     console.log('Uploading new photo to Cloudinary...');
     
     // Upload new photo to Cloudinary
+    const userIdentifier = (user.userId && user.userId !== "undefined")
+    ? user.userId
+    : user._id.toString();
+      console.log("Uploading photo using ID:", userIdentifier);
+
     const uploadResult = await uploadToCloudinary(
-      req.file, 
-      'profile-photos', 
-      user.userId
-    );
-    
+      req.file,
+      'profile-photos',
+      userIdentifier
+    );    
+
     console.log(`Photo uploaded successfully: ${uploadResult.url}`);
 
     // Update user with new profile photo information

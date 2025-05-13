@@ -7,8 +7,10 @@ const UserSchema = new Schema(
     userId: {
       type: String,
       unique: true,
-      required: true,
-    },
+      default: function () {
+        return this._id.toString();
+      },
+    },       
     userName: {
       type: String,
       required: [true, "Username is required"],
@@ -70,7 +72,7 @@ const UserSchema = new Schema(
     profilePhoto: {
       url: {
         type: String,
-        default: "https://via.placeholder.com/150",
+        default: "/Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/assets/images/placeholder2.jpg",
       },
       filename: {
         type: String,
