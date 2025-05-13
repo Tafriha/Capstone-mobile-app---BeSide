@@ -10,25 +10,25 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 // Prevent splash from hiding early
 SplashScreen.preventAutoHideAsync();
 
-// Import base theme colors (optional: centralize further)
+// Light and Dark Themes
 import {
   DefaultTheme as NavigationDefaultTheme,
   DarkTheme as NavigationDarkTheme,
 } from "@react-navigation/native";
 
-// Theme color config (based on your chosen palette)
+// Custom Themes
 const MyLightTheme = {
   ...NavigationDefaultTheme,
   colors: {
     ...NavigationDefaultTheme.colors,
-    background: "#FBE6DA", // App background
-    primary: "#2DB5A9", // Primary CTA
-    secondary: "#8BE4DB", // Secondary CTA
-    accent: "#EBB7AD", // Supportive pink
-    info: "#659B5E", // Success/Info
-    text: "#282C3E", // High contrast
-    border: "#DDDBe5", // Form borders, tabs
-    notification: "#77141F", // Error/Alert
+    background: "#FBE6DA",
+    primary: "#2DB5A9",
+    secondary: "#8BE4DB",
+    accent: "#EBB7AD",
+    info: "#659B5E",
+    text: "#282C3E",
+    border: "#DDDBe5",
+    notification: "#77141F",
   },
 };
 
