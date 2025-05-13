@@ -1,26 +1,37 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: "#282C3E", // Strong dark for text
+    background: "#FBE6DA", // App background
+    surface: "#EBB7AD", // Card surfaces
+
+    primary: "#282C3E", // Primary actions (CTA, Register)
+    secondary: "#8BE4DB", // Secondary actions (like Submit)
+
+    danger: "#77141F", // Red alert
+    warning: "#EBB7AD", // Soft warning
+    success: "#659B5E", // Success green
+    info: "#8BE4DB", // Info highlight
+
+    outline: "#2DB5A9", // Outline button border
+    muted: "#DDDBe5", // Placeholder, disabled
+    footer: "#38231A", // Footer dark base
   },
+
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: "#FBE6DA", // Bright on dark
+    background: "#282C3E", // App background
+    surface: "#1E1E1E", // Card surface
+
+    primary: "#8BE4DB", // CTA for dark mode
+    secondary: "#2DB5A9", // Alt action
+
+    danger: "#77141F",
+    warning: "#EBB7AD",
+    success: "#2EC4B6",
+    info: "#8BE4DB",
+
+    outline: "#8BE4DB",
+    muted: "#38231A",
+    footer: "#121212",
   },
 };

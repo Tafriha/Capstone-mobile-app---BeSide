@@ -1,19 +1,19 @@
-// /Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/app/login.jsx
 import React, { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { View, TextInput, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedButton } from "@/components/ThemedButton";
+import { Typography } from "@/constants/Typography";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const background = useThemeColor({}, "background");
+  const text = useThemeColor({}, "text");
+  const border = useThemeColor({}, "primary");
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -32,10 +32,8 @@ export default function LoginScreen() {
 
       if (response.ok) {
         const user = data.data.user;
-
-        // ✅ Store user info and token
         await AsyncStorage.setItem("user", JSON.stringify(user));
-        await AsyncStorage.setItem("token", data.token); // 🔐 Secure future API access
+        await AsyncStorage.setItem("token", data.token);
 
         if (user.isVerified) {
           router.replace("/home");
@@ -52,41 +50,38 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <View style={[styles.container, { backgroundColor: background }]}>
+      <ThemedText type="title" style={styles.title}>
+        Login
+      </ThemedText>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { borderColor: border, color: text }]}
         placeholder="Username"
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
-        placeholderTextColor="#ccc"
+        placeholderTextColor={border}
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { borderColor: border, color: text }]}
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        placeholderTextColor="#ccc"
+        placeholderTextColor={border}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
+      <ThemedButton title="Login" onPress={handleLogin} />
 
       <View style={styles.footerTextContainer}>
-        <Text style={styles.footerText}>
+        <ThemedText type="default">
           Don't have an account?{" "}
-          <Text
-            style={styles.footerLink}
-            onPress={() => router.push("/register")}
-          >
+          <ThemedText type="link" onPress={() => router.push("/register")}>
             Register
-          </Text>
-        </Text>
+          </ThemedText>
+        </ThemedText>
       </View>
     </View>
   );
@@ -95,48 +90,25 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     padding: 24,
     justifyContent: "center",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#9B5377",
     textAlign: "center",
     marginBottom: 30,
   },
   input: {
     height: 50,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 20,
-    color: "#333",
+    backgroundColor: "#FBE6DAa", // Light input field background
   },
-  button: {
-    backgroundColor: "#9B5377",
-    paddingVertical: 14,
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+
   footerTextContainer: {
     marginTop: 24,
     alignItems: "center",
-  },
-  footerText: {
-    color: "#9B5377",
-  },
-  footerLink: {
-    fontWeight: "bold",
-    textDecorationLine: "underline",
   },
 });

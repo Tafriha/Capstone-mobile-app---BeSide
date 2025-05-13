@@ -1,20 +1,14 @@
-// /Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/app/verify.jsx
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Platform,
-} from "react-native";
+import { View, TextInput, StyleSheet, Alert, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedButton } from "@/components/ThemedButton";
 
 export default function VerifyScreen() {
-  const [userName, setUserName] = useState(null); // ✅ dynamic userName
+  const [userName, setUserName] = useState(null);
   const [verificationIdType, setVerificationIdType] = useState("wwcc");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -22,13 +16,17 @@ export default function VerifyScreen() {
   const [expiry, setExpiry] = useState("");
   const [dob, setDob] = useState("");
 
+  const background = useThemeColor({}, "background");
+  const border = useThemeColor({}, "primary");
+  const text = useThemeColor({}, "text");
+
   useEffect(() => {
     const loadUser = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          setUserName(parsedUser.userName); // ✅ grab from stored object
+          setUserName(parsedUser.userName);
         } else {
           Alert.alert("Error", "No user is logged in.");
           router.replace("/login");
@@ -67,15 +65,9 @@ export default function VerifyScreen() {
       const data = await res.json();
 
       if (res.ok && data?.data?.user) {
-        console.log("Verification response:", data);
         const updatedUser = data.data.user;
-
-        // Mark as verified
         updatedUser.isVerified = true;
-
-        // Save to storage
         await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-
         Alert.alert("Success", "Verification completed!");
         router.replace("/home");
       } else {
@@ -88,60 +80,64 @@ export default function VerifyScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Verify Identity</Text>
+    <View style={[styles.container, { backgroundColor: background }]}>
+      <ThemedText type="title" style={styles.title}>
+        Verify Identity
+      </ThemedText>
 
-      <Text style={styles.label}>ID Type</Text>
-      <View style={styles.pickerWrapper}>
+      <ThemedText type="defaultSemiBold" style={styles.label}>
+        ID Type
+      </ThemedText>
+
+      <View
+        style={[
+          styles.pickerWrapper,
+          { borderColor: border, backgroundColor: background },
+        ]}
+      >
         <Picker
           selectedValue={verificationIdType}
           onValueChange={(itemValue) => setVerificationIdType(itemValue)}
-          style={styles.picker}
+          style={[styles.picker, { color: text, backgroundColor: background }]}
         >
           <Picker.Item label="WWCC" value="wwcc" />
           <Picker.Item label="License" value="license" />
         </Picker>
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="First Name"
-        value={firstName}
-        onChangeText={setFirstName}
-        placeholderTextColor="#aaa"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Last Name"
-        value={lastName}
-        onChangeText={setLastName}
-        placeholderTextColor="#aaa"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="ID Number"
-        value={number}
-        onChangeText={setNumber}
-        placeholderTextColor="#aaa"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Expiry Date (DD-MM-YYYY)"
-        value={expiry}
-        onChangeText={setExpiry}
-        placeholderTextColor="#aaa"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Date of Birth (DD-MM-YYYY)"
-        value={dob}
-        onChangeText={setDob}
-        placeholderTextColor="#aaa"
-      />
+      {[
+        { placeholder: "First Name", value: firstName, setValue: setFirstName },
+        { placeholder: "Last Name", value: lastName, setValue: setLastName },
+        { placeholder: "ID Number", value: number, setValue: setNumber },
+        {
+          placeholder: "Expiry Date (DD-MM-YYYY)",
+          value: expiry,
+          setValue: setExpiry,
+        },
+        {
+          placeholder: "Date of Birth (DD-MM-YYYY)",
+          value: dob,
+          setValue: setDob,
+        },
+      ].map((field, index) => (
+        <TextInput
+          key={index}
+          style={[
+            styles.input,
+            {
+              borderColor: border,
+              color: text,
+              backgroundColor: background,
+            },
+          ]}
+          placeholder={field.placeholder}
+          value={field.value}
+          onChangeText={field.setValue}
+          placeholderTextColor={border}
+        />
+      ))}
 
-      <TouchableOpacity style={styles.button} onPress={handleVerify}>
-        <Text style={styles.buttonText}>Verify</Text>
-      </TouchableOpacity>
+      <ThemedButton title="Verify" onPress={handleVerify} />
     </View>
   );
 }
@@ -149,57 +145,33 @@ export default function VerifyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     padding: 24,
     justifyContent: "center",
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#9B5377",
-    marginBottom: 20,
     textAlign: "center",
+    marginBottom: 20,
   },
   label: {
-    color: "#9B5377",
-    fontWeight: "bold",
     marginBottom: 5,
   },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
     marginBottom: 15,
-    backgroundColor: "#f9f9f9",
     overflow: "hidden",
     zIndex: Platform.OS === "ios" ? 999 : 1,
   },
   picker: {
     height: 50,
     width: "100%",
-    color: "#333",
   },
   input: {
     height: 50,
-    borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 15,
-    color: "#333",
-    backgroundColor: "#f9f9f9",
-  },
-  button: {
-    backgroundColor: "#9B5377",
-    paddingVertical: 14,
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
   },
 });

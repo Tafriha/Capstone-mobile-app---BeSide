@@ -1,42 +1,32 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
-  Text,
-  Image,
   StyleSheet,
-  TouchableOpacity,
   Modal,
   Dimensions,
+  TouchableOpacity,
   Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import MapView, { Marker, Callout } from "react-native-maps";
 import { useFocusEffect } from "@react-navigation/native";
-import { Typography } from "../constants/Typography";
-import { Colors } from "../constants/Colors";
 import * as Location from "expo-location";
+
+import { Colors } from "@/constants/Colors";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedButton } from "@/components/ThemedButton";
 
 const { width } = Dimensions.get("window");
 
 const customMapStyle = [
-  {
-    elementType: "geometry",
-    stylers: [{ color: "#f5f5f5" }],
-  },
-  {
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#616161" }],
-  },
-  {
-    featureType: "water",
-    stylers: [{ color: "#c9c9c9" }],
-  },
+  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { featureType: "water", stylers: [{ color: "#c9c9c9" }] },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  
   const [user, setUser] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -44,7 +34,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const checkUserAndLocation = async () => {
+      const load = async () => {
         const stored = await AsyncStorage.getItem("user");
         if (stored) {
           setUser(JSON.parse(stored));
@@ -53,25 +43,20 @@ export default function HomeScreen() {
         }
 
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          alert("Permission to access location was denied");
-          return;
-        }
+        if (status !== "granted") return;
 
         try {
           const location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Highest,
           });
 
-          const coords = {
+          setCurrentLocation({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
             latitudeDelta: 0.01,
             longitudeDelta: 0.01,
-          };
-
-          setCurrentLocation(coords);
-        } catch (error) {
+          });
+        } catch {
           setCurrentLocation({
             latitude: -37.8136,
             longitude: 144.9631,
@@ -81,7 +66,7 @@ export default function HomeScreen() {
         }
       };
 
-      checkUserAndLocation();
+      load();
     }, [])
   );
 
@@ -90,98 +75,55 @@ export default function HomeScreen() {
     router.replace("/login");
   };
 
-  const handleCompanion = () => {
-    setModalVisible(true);
-  };
-
-  const handleVerifyRedirect = () => {
-    setModalVisible(false);
-    router.push("/verify");
-  };
-
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-        />
-        <Text style={styles.headerTitle}>Home</Text>
+        <ThemedText type="title">BeSide</ThemedText>
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
-          <Text style={styles.menuIcon}>☰</Text>
+          <ThemedText type="defaultSemiBold">☰</ThemedText>
         </TouchableOpacity>
       </View>
 
-      {/* Menu Modal */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={menuVisible}
-        onRequestClose={() => setMenuVisible(false)}
-      >
+      <Modal transparent animationType="fade" visible={menuVisible}>
         <TouchableOpacity
           style={styles.menuOverlay}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={styles.menuContainer}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false);
-                router.push("/profile");
-              }}
-            >
-              <Text style={styles.menuText}>Account</Text>
+          <View style={styles.menuBox}>
+            <TouchableOpacity onPress={() => router.push("/profile")}>
+              <ThemedText type="defaultSemiBold" style={styles.menuItem}>
+                Account
+              </ThemedText>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-              <Text style={[styles.menuText, { color: Colors.light.danger }]}>
+            <TouchableOpacity onPress={handleLogout}>
+              <ThemedText
+                type="defaultSemiBold"
+                style={[styles.menuItem, { color: Colors.light.danger }]}
+              >
                 Logout
-              </Text>
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Verification Modal */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.popupContainer}>
-          <View style={styles.popupBox}>
-            <Text style={styles.popupTitle}>Oops!</Text>
-            <Text style={styles.popupMessage}>
-              It looks like you're not verified yet.
-            </Text>
-            <TouchableOpacity
-              style={styles.verifyButton}
-              onPress={handleVerifyRedirect}
-            >
-              <Text style={styles.verifyButtonText}>Verify Now</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Map View */}
+      {/* Map */}
       <View style={styles.mapContainer}>
         {currentLocation && (
           <MapView
             customMapStyle={customMapStyle}
             mapType="standard"
             style={styles.map}
-            showsUserLocation={true}
-            followsUserLocation={true}
+            showsUserLocation
+            followsUserLocation
             region={currentLocation}
           >
             <Marker coordinate={currentLocation}>
               <Callout>
-                <View style={{ width: 150 }}>
-                  <Text style={{ fontWeight: "bold" }}>You are here</Text>
-                  <Text>Live location from device</Text>
+                <View style={{ width: 140 }}>
+                  <ThemedText type="defaultSemiBold">You are here</ThemedText>
+                  <ThemedText type="caption">Live GPS location</ThemedText>
                 </View>
               </Callout>
             </Marker>
@@ -190,9 +132,32 @@ export default function HomeScreen() {
       </View>
 
       {/* Find Companion Button */}
-      <TouchableOpacity style={styles.button} onPress={handleCompanion}>
-        <Text style={styles.buttonText}>Find a Companion</Text>
-      </TouchableOpacity>
+      <ThemedButton
+        title="Find a Companion"
+        onPress={() => setModalVisible(true)}
+        style={styles.actionButton}
+      />
+
+      {/* Not Verified Popup */}
+      <Modal transparent animationType="slide" visible={modalVisible}>
+        <View style={styles.popupOverlay}>
+          <View style={styles.popupBox}>
+            <ThemedText type="subtitle">Oops!</ThemedText>
+            <ThemedText type="default">
+              It looks like you're not verified yet.
+            </ThemedText>
+            <ThemedButton
+              title="Verify Now"
+              type="primary"
+              onPress={() => {
+                setModalVisible(false);
+                router.push("/verify");
+              }}
+              style={styles.verifyButton}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -201,108 +166,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
-    paddingTop: 50,
+    paddingTop: Platform.OS === "android" ? 40 : 60,
     paddingHorizontal: 20,
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 20,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-  },
-  headerTitle: {
-    ...Typography.heading,
-    color: Colors.light.primary,
-  },
-  menuIcon: {
-    fontSize: 26,
-    color: Colors.light.text,
-  },
-  menuOverlay: {
-    flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: 60,
-    paddingRight: 20,
-    backgroundColor: "rgba(0,0,0,0.2)",
-  },
-  menuContainer: {
-    width: 150,
-    backgroundColor: Colors.light.surface,
-    borderRadius: 10,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  menuItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  menuText: {
-    ...Typography.body,
-    color: Colors.light.text,
+    alignItems: "center",
   },
   mapContainer: {
     flex: 1,
-    borderRadius: 15,
+    borderRadius: 16,
     overflow: "hidden",
     marginBottom: 20,
   },
   map: {
+    width: "90%",
+    height: "90%",
+  },
+  actionButton: {
     width: "100%",
-    height: "100%",
   },
-  button: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 14,
-    borderRadius: 25,
-    alignItems: "center",
-    marginBottom: 30,
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    padding: 20,
   },
-  buttonText: {
-    ...Typography.body,
-    color: "#fff",
-    fontWeight: "bold",
+  menuBox: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: 10,
+    padding: 12,
+    width: 160,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  popupContainer: {
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  popupOverlay: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
   popupBox: {
     backgroundColor: Colors.light.surface,
-    borderRadius: 10,
-    padding: 25,
-    alignItems: "center",
+    padding: 24,
+    borderRadius: 14,
     width: width * 0.8,
-  },
-  popupTitle: {
-    ...Typography.subheading,
-    color: Colors.light.primary,
-    marginBottom: 10,
-  },
-  popupMessage: {
-    ...Typography.body,
-    color: Colors.light.text,
-    textAlign: "center",
-    marginBottom: 20,
+    alignItems: "center",
   },
   verifyButton: {
-    backgroundColor: Colors.light.accent,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 20,
-  },
-  verifyButtonText: {
-    ...Typography.body,
-    color: "#fff",
-    fontWeight: "bold",
+    marginTop: 20,
+    width: "80%",
   },
 });
