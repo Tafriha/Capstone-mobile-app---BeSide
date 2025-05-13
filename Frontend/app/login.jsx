@@ -73,6 +73,15 @@ export default function LoginScreen() {
         placeholderTextColor={border}
       />
 
+      {/* Forgot Password link */}
+      <ThemedText
+        type="link"
+        onPress={() => router.push("/forgotPassword")}
+        style={{ textAlign: "right", marginBottom: 20 }}
+      >
+        Forgot Password?
+      </ThemedText>
+
       <ThemedButton title="Login" onPress={handleLogin} />
 
       <View style={styles.footerTextContainer}>
@@ -104,9 +113,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 20,
-    backgroundColor: "#FBE6DAa", // Light input field background
+    backgroundColor: "#FBE6DAa",
   },
-
   footerTextContainer: {
     marginTop: 24,
     alignItems: "center",
