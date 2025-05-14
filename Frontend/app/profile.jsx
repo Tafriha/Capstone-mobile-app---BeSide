@@ -18,6 +18,7 @@ import { router } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const API_BASE_URL = "http://10.0.2.2:5001/api/v1/user";
 
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState("");
   const [mobileNo, setMobileNo] = useState("");
   const [photo, setPhoto] = useState(null);
+  const [address, setAddress] = useState({});
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -35,22 +37,14 @@ export default function ProfileScreen() {
   const accent = useThemeColor({}, "secondary");
   const surface = useThemeColor({}, "surface");
 
-  const resolvedPhoto =
-    photo && photo.startsWith("http")
-      ? photo
-      : require("/Users/nameranayat/Documents/GitHub/BeSide-App/Frontend/assets/images/placeholder2.jpg");
-
   useEffect(() => {
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
-    console.log("Fetching profile data...");
-
     const token = await AsyncStorage.getItem("token");
     if (!token) {
       Alert.alert("Error", "No token found. Please login again.");
-      console.warn("No token found, redirecting to login...");
       router.replace("/login");
       return;
     }
@@ -61,23 +55,18 @@ export default function ProfileScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-
       if (res.ok) {
         const user = data.data.user;
-        console.log("Profile loaded successfully");
-        console.log("Username:", user.userName);
-        console.log("Loaded profile photo URL:", user.profilePhoto?.url);
-
         setProfile(user);
         setEmail(user.email);
         setMobileNo(user.mobileNo);
         setPhoto(user.profilePhoto?.url);
+        setAddress(user.address || {});
+        
       } else {
-        console.error("Failed to load profile:", data.message);
         Alert.alert("Error", data.message || "Failed to load profile.");
       }
-    } catch (error) {
-      console.error("Exception while fetching profile:", error);
+    } catch {
       Alert.alert("Error", "Something went wrong.");
     } finally {
       setLoading(false);
@@ -85,16 +74,11 @@ export default function ProfileScreen() {
   };
 
   const pickImage = async () => {
-    console.log("Requesting camera and gallery access...");
     const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
     const galleryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (cameraPerm.status !== "granted" || galleryPerm.status !== "granted") {
-      console.warn("Permissions denied");
-      Alert.alert(
-        "Permission Required",
-        "We need access to your camera and gallery to update your profile photo."
-      );
+      Alert.alert("Permission Required", "Camera and gallery access required.");
       return;
     }
 
@@ -128,10 +112,8 @@ export default function ProfileScreen() {
   };
 
   const handleImageResult = async (result) => {
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+    if (!result.canceled && result.assets.length > 0) {
       const selected = result.assets[0];
-      console.log("Selected image URI:", selected.uri);
-
       const token = await AsyncStorage.getItem("token");
       const formData = new FormData();
       formData.append("photo", {
@@ -152,22 +134,14 @@ export default function ProfileScreen() {
 
         const data = await response.json();
         if (response.ok) {
-          console.log(
-            "Upload successful. New photo URL:",
-            data.data.user.profilePhoto.url
-          );
           setPhoto(data.data.user.profilePhoto.url);
           Alert.alert("Success", "Photo updated!");
         } else {
-          console.error("Upload failed:", data.message);
           Alert.alert("Error", data.message || "Upload failed.");
         }
-      } catch (error) {
-        console.error("Upload exception:", error);
+      } catch {
         Alert.alert("Error", "Upload failed.");
       }
-    } else {
-      console.log("Image picker canceled or returned no assets.");
     }
   };
 
@@ -179,6 +153,7 @@ export default function ProfileScreen() {
       );
       return;
     }
+
     const token = await AsyncStorage.getItem("token");
     try {
       const res = await fetch(`${API_BASE_URL}/profile`, {
@@ -187,16 +162,17 @@ export default function ProfileScreen() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, mobileNo }),
+        body: JSON.stringify({ email, mobileNo, address }),
       });
       const data = await res.json();
       if (res.ok) {
         Alert.alert("Success", "Profile updated!");
         fetchProfile();
+        console.log("Loaded Custom User ID:", user.userId);
       } else {
         Alert.alert("Error", data.message || "Update failed.");
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Update failed.");
     }
   };
@@ -216,23 +192,14 @@ export default function ProfileScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: surface }]}>
-          <TouchableOpacity
-            onPress={() => {
-              console.log("DEBUG: Avatar clicked");
-              console.log("DEBUG: Current photo URL:", resolvedPhoto);
-              setModalVisible(true);
-            }}
-          >
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
             <Image
-              source={{ uri: resolvedPhoto }}
-              style={styles.avatar}
-              onLoad={() => console.log("DEBUG: Avatar image loaded")}
-              onError={(e) =>
-                console.log(
-                  "DEBUG: Avatar image failed to load",
-                  e.nativeEvent.error
-                )
+              source={
+                photo && photo.startsWith("http")
+                  ? { uri: photo }
+                  : require("@/assets/images/placeholder2.jpg")
               }
+              style={styles.avatar}
             />
           </TouchableOpacity>
           <ThemedText type="link" style={styles.uploadText} onPress={pickImage}>
@@ -247,27 +214,12 @@ export default function ProfileScreen() {
               value: mobileNo,
               onChangeText: setMobileNo,
             },
-            { label: "User ID", value: profile._id, editable: false },
             {
-              label: "Account Status",
-              value: profile.accountStatus,
+              label: "User ID",
+              value: profile.userId || profile._id,
               editable: false,
             },
-            {
-              label: "Verified?",
-              value: profile.isVerified ? "Yes" : "No",
-              editable: false,
-            },
-            {
-              label: "Consent Given?",
-              value: profile.consentGiven ? "Yes" : "No",
-              editable: false,
-            },
-            {
-              label: "Availability",
-              value: profile.availability ? "Yes" : "No",
-              editable: false,
-            },
+
             {
               label: "Registered On",
               value: new Date(profile.createdDate).toLocaleDateString(),
@@ -287,6 +239,97 @@ export default function ProfileScreen() {
             </View>
           ))}
 
+          <View style={styles.statusContainer}>
+            {[
+              {
+                label: profile.isVerified ? "Verified" : "Unverified",
+                active: profile.isVerified,
+              },
+              {
+                label: profile.availability ? "Available" : "Unavailable",
+                active: profile.availability,
+              },
+            ].map((item, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: item.active ? "#D1FADF" : "#FEE4E2" },
+                ]}
+              >
+                <MaterialIcons
+                  name={item.active ? "check-circle" : "cancel"}
+                  size={16}
+                  color={item.active ? "#027A48" : "#B42318"}
+                  style={styles.statusIcon}
+                />
+                <ThemedText
+                  style={[
+                    styles.statusText,
+                    { color: item.active ? "#027A48" : "#B42318" },
+                  ]}
+                >
+                  {item.label}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.addressGroup}>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>Country</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.country || ""}
+                onChangeText={(text) =>
+                  setAddress({ ...address, country: text })
+                }
+              />
+            </View>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>State</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.state || ""}
+                onChangeText={(text) => setAddress({ ...address, state: text })}
+              />
+            </View>
+          </View>
+
+          <View style={styles.addressGroup}>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>City</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.city || ""}
+                onChangeText={(text) => setAddress({ ...address, city: text })}
+              />
+            </View>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>Postal Code</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.postalCode || ""}
+                onChangeText={(text) =>
+                  setAddress({ ...address, postalCode: text })
+                }
+              />
+            </View>
+          </View>
+
+          <View style={styles.addressGroup}>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>Country Code</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.countryCode || ""}
+                onChangeText={(text) =>
+                  setAddress({ ...address, countryCode: text })
+                }
+              />
+            </View>
+          </View>
+
           <ThemedButton
             title="Save Changes"
             onPress={handleSave}
@@ -296,31 +339,18 @@ export default function ProfileScreen() {
 
         <Modal
           visible={modalVisible}
-          transparent={true}
+          transparent
           animationType="fade"
-          onRequestClose={() => {
-            console.log("DEBUG: Modal closed");
-            setModalVisible(false);
-          }}
+          onRequestClose={() => setModalVisible(false)}
         >
           <TouchableOpacity
             style={styles.modalBackground}
-            onPress={() => {
-              console.log("DEBUG: Modal background clicked");
-              setModalVisible(false);
-            }}
+            onPress={() => setModalVisible(false)}
           >
             <Image
-              source={{ uri: resolvedPhoto }}
+              source={{ uri: photo }}
               style={styles.fullImage}
               resizeMode="contain"
-              onLoad={() => console.log("DEBUG: Full-size image loaded")}
-              onError={(e) =>
-                console.log(
-                  "DEBUG: Full-size image failed to load",
-                  e.nativeEvent.error
-                )
-              }
             />
           </TouchableOpacity>
         </Modal>
@@ -372,9 +402,41 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 10,
+    color: "#000",
   },
   saveBtn: {
     marginTop: 20,
     marginBottom: 30,
+  },
+  addressGroup: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  addressBox: {
+    flex: 1,
+  },
+  statusContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: "flex-start",
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  statusIcon: {
+    marginRight: 6,
   },
 });
