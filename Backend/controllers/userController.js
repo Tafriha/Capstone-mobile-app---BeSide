@@ -1,8 +1,10 @@
+const { uploadToCloudinary, deleteFromCloudinary, uploadSingle } = require("../utils/fileUpload");
 const User = require("../models/userModel");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 const generateUserId = require("../utils/generateUserId");
 
+// Update user profile and generate userId if missing
 exports.updateUserProfile = catchAsync(async (req, res, next) => {
   const { userName, email, mobileNo, firstName, lastName, bio, address } = req.body;
 
@@ -19,29 +21,51 @@ exports.updateUserProfile = catchAsync(async (req, res, next) => {
 
   if (address) {
     updateData.address = { ...user.address, ...address };
-
     const { countryCode, state, postalCode } = updateData.address;
 
-    // Generate userId ONLY if it does not exist
     if (!user.userId && countryCode && state && postalCode) {
       updateData.userId = generateUserId({ address: updateData.address });
-      console.log("Generated custom userId:", updateData.userId);
+      console.log("Generated userId:", updateData.userId);
     }
   }
 
   const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, {
     new: true,
-    runValidators: true,
+    runValidators: true
   }).select("-password -__v");
 
   res.status(200).json({
     status: "success",
     message: "Profile updated successfully",
-    data: { user: updatedUser },
+    data: { user: updatedUser }
   });
 });
 
-exports.uploadProfilePhoto = uploadSingle;
+// Save profile photo and upload to Cloudinary
+exports.saveProfilePhoto = catchAsync(async (req, res, next) => {
+  if (!req.file) return next(new AppError("No file uploaded", 400));
+
+  const user = await User.findById(req.user._id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  if (user.profilePhoto?.publicId) {
+    await deleteFromCloudinary(user.profilePhoto.publicId);
+  }
+
+  const uploadResult = await uploadToCloudinary(req.file, "profile-photos", user._id.toString());
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    { profilePhoto: uploadResult },
+    { new: true, runValidators: true }
+  ).select("-password -__v");
+
+  res.status(200).json({
+    status: "success",
+    message: "Profile photo updated successfully",
+    data: { user: updatedUser },
+  });
+});
 
 // Update profile visibility and shared information
 exports.updateProfileSettings = catchAsync(async (req, res, next) => {
@@ -98,45 +122,6 @@ exports.getUserProfile = catchAsync(async (req, res, next) => {
   if (!user) return next(new AppError("User not found", 404));
 
   res.status(200).json({ status: "success", data: { user } });
-});
-
-// Update user profile and generate userId if missing
-exports.updateUserProfile = catchAsync(async (req, res, next) => {
-  const {
-    userName, email, mobileNo, firstName, lastName, bio, address
-  } = req.body;
-
-  const updateData = {};
-  if (userName) updateData.userName = userName;
-  if (email) updateData.email = email;
-  if (mobileNo) updateData.mobileNo = mobileNo;
-  if (firstName) updateData.firstName = firstName;
-  if (lastName) updateData.lastName = lastName;
-  if (bio !== undefined) updateData.bio = bio;
-
-  const user = await User.findById(req.user._id);
-  if (!user) return next(new AppError("User not found", 404));
-
-  if (address) {
-    updateData.address = { ...user.address, ...address };
-    const { countryCode, state, postalCode } = updateData.address;
-
-    if (!user.userId && countryCode && state && postalCode) {
-      updateData.userId = generateUserId({ address: updateData.address });
-      console.log("Generated userId:", updateData.userId);
-    }
-  }
-
-  const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, {
-    new: true,
-    runValidators: true
-  }).select("-password -__v");
-
-  res.status(200).json({
-    status: "success",
-    message: "Profile updated successfully",
-    data: { user: updatedUser }
-  });
 });
 
 // Delete user profile and remove image from Cloudinary
@@ -211,3 +196,6 @@ exports.testCloudinaryConnection = catchAsync(async (req, res, next) => {
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
+
+// Upload middleware for profile photo (should be declared after all imports)
+exports.uploadProfilePhoto = uploadSingle;
