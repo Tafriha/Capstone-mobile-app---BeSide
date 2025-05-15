@@ -18,7 +18,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Typography } from "@/constants/Typography";
-const API_BASE_URL = "http://10.0.2.2:5001/api/v1/user";
+const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
