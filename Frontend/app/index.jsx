@@ -1,8 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { View, StyleSheet, Animated, Dimensions, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useThemeColor } from "@/hooks/useThemeColor";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { Typography } from "@/constants/Typography";
@@ -12,8 +11,6 @@ const { height } = Dimensions.get("window");
 export default function WelcomeScreen() {
   const router = useRouter();
 
-  const background = useThemeColor({}, "background");
-  const surface = useThemeColor({}, "surface");
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 

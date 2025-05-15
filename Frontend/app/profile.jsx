@@ -10,6 +10,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   TouchableOpacity,
+  Modal,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,20 +18,25 @@ import { router } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { useThemeColor } from "@/hooks/useThemeColor";
+
 import { Typography } from "@/constants/Typography";
 const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
+
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [email, setEmail] = useState("");
   const [mobileNo, setMobileNo] = useState("");
   const [photo, setPhoto] = useState(null);
+  const [address, setAddress] = useState({});
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const border = useThemeColor({}, "primary");
   const background = useThemeColor({}, "background");
   const text = useThemeColor({}, "text");
   const accent = useThemeColor({}, "secondary");
+  const surface = useThemeColor({}, "surface");
 
   useEffect(() => {
     fetchProfile();
@@ -43,6 +49,7 @@ export default function ProfileScreen() {
       router.replace("/login");
       return;
     }
+
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/profile`, {
@@ -55,10 +62,12 @@ export default function ProfileScreen() {
         setEmail(user.email);
         setMobileNo(user.mobileNo);
         setPhoto(user.profilePhoto?.url);
+        setAddress(user.address || {});
+        
       } else {
         Alert.alert("Error", data.message || "Failed to load profile.");
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Something went wrong.");
     } finally {
       setLoading(false);
@@ -66,22 +75,56 @@ export default function ProfileScreen() {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Image],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-    if (!result.canceled) {
+    const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
+    const galleryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (cameraPerm.status !== "granted" || galleryPerm.status !== "granted") {
+      Alert.alert("Permission Required", "Camera and gallery access required.");
+      return;
+    }
+
+    Alert.alert("Select Image Source", "Choose an option", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+          });
+          handleImageResult(result);
+        },
+      },
+      {
+        text: "Gallery",
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+          });
+          handleImageResult(result);
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const handleImageResult = async (result) => {
+    if (!result.canceled && result.assets.length > 0) {
+      const selected = result.assets[0];
       const token = await AsyncStorage.getItem("token");
       const formData = new FormData();
-      formData.append("file", {
-        uri: result.assets[0].uri,
+      formData.append("photo", {
+        uri: selected.uri,
         name: "profile.jpg",
         type: "image/jpeg",
       });
+
       try {
-        const response = await fetch(`${API_BASE_URL}/upload-profile-photo`, {
+        const response = await fetch(`${API_BASE_URL}/profile-photo`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -89,6 +132,7 @@ export default function ProfileScreen() {
           },
           body: formData,
         });
+
         const data = await response.json();
         if (response.ok) {
           setPhoto(data.data.user.profilePhoto.url);
@@ -96,7 +140,7 @@ export default function ProfileScreen() {
         } else {
           Alert.alert("Error", data.message || "Upload failed.");
         }
-      } catch (error) {
+      } catch {
         Alert.alert("Error", "Upload failed.");
       }
     }
@@ -110,6 +154,7 @@ export default function ProfileScreen() {
       );
       return;
     }
+
     const token = await AsyncStorage.getItem("token");
     try {
       const res = await fetch(`${API_BASE_URL}/profile`, {
@@ -118,16 +163,17 @@ export default function ProfileScreen() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, mobileNo }),
+        body: JSON.stringify({ email, mobileNo, address }),
       });
       const data = await res.json();
       if (res.ok) {
         Alert.alert("Success", "Profile updated!");
         fetchProfile();
+        console.log("Loaded Custom User ID:", user.userId);
       } else {
         Alert.alert("Error", data.message || "Update failed.");
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Update failed.");
     }
   };
@@ -143,19 +189,23 @@ export default function ProfileScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "android" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.container, { background }]}>
-          <TouchableOpacity onPress={pickImage}>
+        <View style={[styles.card, { backgroundColor: surface }]}>
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
             <Image
-              source={{ uri: photo || "https://via.placeholder.com/150" }}
+              source={
+                photo && photo.startsWith("http")
+                  ? { uri: photo }
+                  : require("@/assets/images/placeholder2.jpg")
+              }
               style={styles.avatar}
             />
-            <ThemedText type="link" style={styles.uploadText}>
-              Change Photo
-            </ThemedText>
           </TouchableOpacity>
+          <ThemedText type="link" style={styles.uploadText} onPress={pickImage}>
+            Change Photo
+          </ThemedText>
 
           {[
             { label: "Username", value: profile.userName, editable: false },
@@ -165,27 +215,12 @@ export default function ProfileScreen() {
               value: mobileNo,
               onChangeText: setMobileNo,
             },
-            { label: "User ID", value: profile._id, editable: false },
             {
-              label: "Account Status",
-              value: profile.accountStatus,
+              label: "User ID",
+              value: profile.userId || profile._id,
               editable: false,
             },
-            {
-              label: "Verified?",
-              value: profile.isVerified ? "Yes" : "No",
-              editable: false,
-            },
-            {
-              label: "Consent Given?",
-              value: profile.consentGiven ? "Yes" : "No",
-              editable: false,
-            },
-            {
-              label: "Availability",
-              value: profile.availability ? "Yes" : "No",
-              editable: false,
-            },
+
             {
               label: "Registered On",
               value: new Date(profile.createdDate).toLocaleDateString(),
@@ -205,27 +240,154 @@ export default function ProfileScreen() {
             </View>
           ))}
 
+          <View style={styles.statusContainer}>
+            {[
+              {
+                label: profile.isVerified ? "Verified" : "Unverified",
+                active: profile.isVerified,
+              },
+              {
+                label: profile.availability ? "Available" : "Unavailable",
+                active: profile.availability,
+              },
+            ].map((item, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: item.active ? "#D1FADF" : "#FEE4E2" },
+                ]}
+              >
+                <MaterialIcons
+                  name={item.active ? "check-circle" : "cancel"}
+                  size={16}
+                  color={item.active ? "#027A48" : "#B42318"}
+                  style={styles.statusIcon}
+                />
+                <ThemedText
+                  style={[
+                    styles.statusText,
+                    { color: item.active ? "#027A48" : "#B42318" },
+                  ]}
+                >
+                  {item.label}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.addressGroup}>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>Country</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.country || ""}
+                onChangeText={(text) =>
+                  setAddress({ ...address, country: text })
+                }
+              />
+            </View>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>State</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.state || ""}
+                onChangeText={(text) => setAddress({ ...address, state: text })}
+              />
+            </View>
+          </View>
+
+          <View style={styles.addressGroup}>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>City</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.city || ""}
+                onChangeText={(text) => setAddress({ ...address, city: text })}
+              />
+            </View>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>Postal Code</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.postalCode || ""}
+                onChangeText={(text) =>
+                  setAddress({ ...address, postalCode: text })
+                }
+              />
+            </View>
+          </View>
+
+          <View style={styles.addressGroup}>
+            <View style={styles.addressBox}>
+              <ThemedText style={styles.label}>Country Code</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={address.countryCode || ""}
+                onChangeText={(text) =>
+                  setAddress({ ...address, countryCode: text })
+                }
+              />
+            </View>
+          </View>
+
           <ThemedButton
             title="Save Changes"
             onPress={handleSave}
             style={styles.saveBtn}
           />
         </View>
+
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalBackground}
+            onPress={() => setModalVisible(false)}
+          >
+            <Image
+              source={{ uri: photo }}
+              style={styles.fullImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { flexGrow: 1 },
-  container: { flexGrow: 1, padding: 20 },
+  scrollContent: { flexGrow: 1, padding: 16 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
     alignSelf: "center",
     marginBottom: 10,
+  },
+  fullImage: {
+    width: "100%",
+    height: "100%",
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   uploadText: {
     textAlign: "center",
@@ -241,9 +403,41 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 10,
+    color: "#000",
   },
   saveBtn: {
     marginTop: 20,
     marginBottom: 30,
+  },
+  addressGroup: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  addressBox: {
+    flex: 1,
+  },
+  statusContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: "flex-start",
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  statusIcon: {
+    marginRight: 6,
   },
 });
