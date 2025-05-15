@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "expo": "^53.0.9",
+    "expo-dev-client": "~5.1.8",
+    "nanoid": "^5.1.5",
+    "nodemailer": "^7.0.3"
+  },
+  "devDependencies": {
+    "expo-module-scripts": "^4.1.7"
+  }
+}
