@@ -16,6 +16,7 @@ import * as Location from "expo-location";
 import { Colors } from "@/constants/Colors";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
+import ConsentModal from "./ConsentModal";
 
 const { width } = Dimensions.get("window");
 
@@ -31,6 +32,12 @@ export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [consentVisible, setConsentVisible] = useState(false);
+  const [consent, setConsent] = useState({
+    noTouch: false,
+    respectful: false,
+    safety: false,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -85,6 +92,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Menu Modal */}
       <Modal transparent animationType="fade" visible={menuVisible}>
         <TouchableOpacity
           style={styles.menuOverlay}
@@ -94,6 +102,16 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push("/profile")}>
               <ThemedText type="defaultSemiBold" style={styles.menuItem}>
                 Account
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setMenuVisible(false);
+                setConsentVisible(true);
+              }}
+            >
+              <ThemedText type="defaultSemiBold" style={styles.menuItem}>
+                Consent Form
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleLogout}>
@@ -158,6 +176,15 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Consent Form Modal */}
+      <ConsentModal
+        visible={consentVisible}
+        onClose={() => setConsentVisible(false)}
+        consent={consent}
+        setConsent={setConsent}
+        onSubmit={() => alert("Consent accepted. You're now TAPPED ON!")}
+      />
     </View>
   );
 }
@@ -199,7 +226,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     borderRadius: 10,
     padding: 12,
-    width: 160,
+    width: 180,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 10,

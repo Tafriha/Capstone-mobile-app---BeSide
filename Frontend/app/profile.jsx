@@ -18,10 +18,9 @@ import { router } from "expo-router";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { MaterialIcons } from "@expo/vector-icons";
 
-import { Typography } from "@/constants/Typography";
 const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
-
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
