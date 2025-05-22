@@ -109,16 +109,8 @@ export default function VerifyScreen() {
         { placeholder: "First Name", value: firstName, setValue: setFirstName },
         { placeholder: "Last Name", value: lastName, setValue: setLastName },
         { placeholder: "ID Number", value: number, setValue: setNumber },
-        {
-          placeholder: "Expiry Date (DD-MM-YYYY)",
-          value: expiry,
-          setValue: setExpiry,
-        },
-        {
-          placeholder: "Date of Birth (DD-MM-YYYY)",
-          value: dob,
-          setValue: setDob,
-        },
+        { placeholder: "Expiry Date (DD-MM-YYYY)", value: expiry, setValue: setExpiry },
+        { placeholder: "Date of Birth (DD-MM-YYYY)", value: dob, setValue: setDob },
       ].map((field, index) => (
         <TextInput
           key={index}
