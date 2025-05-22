@@ -75,6 +75,21 @@ export default function HomeScreen() {
     router.replace("/login");
   };
 
+  const handleFindCompanion = async () => {
+    const storedUser = await AsyncStorage.getItem("user");
+    if (!storedUser) {
+      router.replace("/login");
+      return;
+    }
+    const parsed = JSON.parse(storedUser);
+    if (parsed.isVerified) {
+      console.log("User is verified. Proceeding to next screen.");
+      // router.push("/companion"); // or handle companion finding logic
+    } else {
+      setModalVisible(true);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -134,7 +149,7 @@ export default function HomeScreen() {
       {/* Find Companion Button */}
       <ThemedButton
         title="Find a Companion"
-        onPress={() => setModalVisible(true)}
+        onPress={handleFindCompanion}
         style={styles.actionButton}
       />
 

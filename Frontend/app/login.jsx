@@ -5,7 +5,6 @@ import { router } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
-import { Typography } from "@/constants/Typography";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -22,7 +21,7 @@ export default function LoginScreen() {
     }
 
     try {
-      const response = await fetch("http://10.0.2.2:5001/api/v1/auth/login", {
+      const response = await fetch("http://10.0.2.2:5000/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userName: username, password }),
@@ -30,30 +29,23 @@ export default function LoginScreen() {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data?.data?.user) {
         const user = data.data.user;
         await AsyncStorage.setItem("user", JSON.stringify(user));
         await AsyncStorage.setItem("token", data.token);
-
-        if (user.isVerified) {
-          router.replace("/home");
-        } else {
-          router.replace("/verify");
-        }
+        router.replace("/home");
       } else {
         alert(data.message || "Login failed");
       }
     } catch (err) {
       alert("Something went wrong. Please try again.");
-      console.error(err);
+      console.error("Login error:", err);
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
-      <ThemedText type="title" style={styles.title}>
-        Login
-      </ThemedText>
+      <ThemedText type="title" style={styles.title}>Login</ThemedText>
 
       <TextInput
         style={[styles.input, { borderColor: border, color: text }]}
@@ -73,12 +65,7 @@ export default function LoginScreen() {
         placeholderTextColor={border}
       />
 
-      {/* Forgot Password link */}
-      <ThemedText
-        type="link"
-        onPress={() => router.push("/forgotPassword")}
-        style={{ textAlign: "right", marginBottom: 20 }}
-      >
+      <ThemedText type="link" onPress={() => router.push("/forgotPassword")} style={{ textAlign: "right", marginBottom: 20 }}>
         Forgot Password?
       </ThemedText>
 
@@ -86,10 +73,7 @@ export default function LoginScreen() {
 
       <View style={styles.footerTextContainer}>
         <ThemedText type="default">
-          Don't have an account?{" "}
-          <ThemedText type="link" onPress={() => router.push("/register")}>
-            Register
-          </ThemedText>
+          Don't have an account? <ThemedText type="link" onPress={() => router.push("/register")}>Register</ThemedText>
         </ThemedText>
       </View>
     </View>
@@ -97,15 +81,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: 30,
-  },
+  container: { flex: 1, padding: 24, justifyContent: "center" },
+  title: { textAlign: "center", marginBottom: 30 },
   input: {
     height: 50,
     borderWidth: 1.5,
@@ -115,8 +92,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: "#FBE6DAa",
   },
-  footerTextContainer: {
-    marginTop: 24,
-    alignItems: "center",
-  },
+  footerTextContainer: { marginTop: 24, alignItems: "center" },
 });

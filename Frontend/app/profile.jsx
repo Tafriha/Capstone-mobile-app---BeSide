@@ -20,7 +20,7 @@ import { ThemedButton } from "@/components/ThemedButton";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const API_BASE_URL = "http://10.0.2.2:5001/api/v1/user";
+const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
@@ -48,7 +48,6 @@ export default function ProfileScreen() {
       router.replace("/login");
       return;
     }
-
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/profile`, {
@@ -62,7 +61,6 @@ export default function ProfileScreen() {
         setMobileNo(user.mobileNo);
         setPhoto(user.profilePhoto?.url);
         setAddress(user.address || {});
-        
       } else {
         Alert.alert("Error", data.message || "Failed to load profile.");
       }
@@ -131,7 +129,6 @@ export default function ProfileScreen() {
           },
           body: formData,
         });
-
         const data = await response.json();
         if (response.ok) {
           setPhoto(data.data.user.profilePhoto.url);
@@ -147,10 +144,7 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!email || !mobileNo) {
-      Alert.alert(
-        "Validation Error",
-        "Email and Mobile Number cannot be empty."
-      );
+      Alert.alert("Validation Error", "Email and Mobile Number cannot be empty.");
       return;
     }
 
@@ -166,14 +160,14 @@ export default function ProfileScreen() {
       });
       const data = await res.json();
       if (res.ok) {
-        Alert.alert("Success", "Profile updated!");
-        fetchProfile();
-        console.log("Loaded Custom User ID:", user.userId);
+        Alert.alert("Success", "Profile updated!", [
+          { text: "OK", onPress: () => router.replace("/home") },
+        ]);
       } else {
         Alert.alert("Error", data.message || "Update failed.");
       }
     } catch {
-      Alert.alert("Error", "Update failed.");
+      Alert.alert("Error", "Something went wrong while updating profile.");
     }
   };
 
@@ -206,30 +200,14 @@ export default function ProfileScreen() {
             Change Photo
           </ThemedText>
 
-          {[
-            { label: "Username", value: profile.userName, editable: false },
+          {[{ label: "Username", value: profile.userName, editable: false },
             { label: "Email", value: email, onChangeText: setEmail },
-            {
-              label: "Mobile Number",
-              value: mobileNo,
-              onChangeText: setMobileNo,
-            },
-            {
-              label: "User ID",
-              value: profile.userId || profile._id,
-              editable: false,
-            },
-
-            {
-              label: "Registered On",
-              value: new Date(profile.createdDate).toLocaleDateString(),
-              editable: false,
-            },
+            { label: "Mobile Number", value: mobileNo, onChangeText: setMobileNo },
+            { label: "User ID", value: profile.userId || profile._id, editable: false },
+            { label: "Registered On", value: new Date(profile.createdDate).toLocaleDateString(), editable: false },
           ].map((field, idx) => (
             <View key={idx}>
-              <ThemedText type="defaultSemiBold" style={styles.label}>
-                {field.label}
-              </ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.label}>{field.label}</ThemedText>
               <TextInput
                 style={[styles.input, { borderColor: border, color: text }]}
                 value={field.value}
@@ -239,51 +217,13 @@ export default function ProfileScreen() {
             </View>
           ))}
 
-          <View style={styles.statusContainer}>
-            {[
-              {
-                label: profile.isVerified ? "Verified" : "Unverified",
-                active: profile.isVerified,
-              },
-              {
-                label: profile.availability ? "Available" : "Unavailable",
-                active: profile.availability,
-              },
-            ].map((item, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.statusChip,
-                  { backgroundColor: item.active ? "#D1FADF" : "#FEE4E2" },
-                ]}
-              >
-                <MaterialIcons
-                  name={item.active ? "check-circle" : "cancel"}
-                  size={16}
-                  color={item.active ? "#027A48" : "#B42318"}
-                  style={styles.statusIcon}
-                />
-                <ThemedText
-                  style={[
-                    styles.statusText,
-                    { color: item.active ? "#027A48" : "#B42318" },
-                  ]}
-                >
-                  {item.label}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
-
           <View style={styles.addressGroup}>
             <View style={styles.addressBox}>
               <ThemedText style={styles.label}>Country</ThemedText>
               <TextInput
                 style={styles.input}
                 value={address.country || ""}
-                onChangeText={(text) =>
-                  setAddress({ ...address, country: text })
-                }
+                onChangeText={(text) => setAddress({ ...address, country: text })}
               />
             </View>
             <View style={styles.addressBox}>
@@ -310,9 +250,7 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.input}
                 value={address.postalCode || ""}
-                onChangeText={(text) =>
-                  setAddress({ ...address, postalCode: text })
-                }
+                onChangeText={(text) => setAddress({ ...address, postalCode: text })}
               />
             </View>
           </View>
@@ -323,18 +261,12 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.input}
                 value={address.countryCode || ""}
-                onChangeText={(text) =>
-                  setAddress({ ...address, countryCode: text })
-                }
+                onChangeText={(text) => setAddress({ ...address, countryCode: text })}
               />
             </View>
           </View>
 
-          <ThemedButton
-            title="Save Changes"
-            onPress={handleSave}
-            style={styles.saveBtn}
-          />
+          <ThemedButton title="Save Changes" onPress={handleSave} style={styles.saveBtn} />
         </View>
 
         <Modal
@@ -415,28 +347,5 @@ const styles = StyleSheet.create({
   },
   addressBox: {
     flex: 1,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  statusChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignSelf: "flex-start",
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  statusIcon: {
-    marginRight: 6,
   },
 });
