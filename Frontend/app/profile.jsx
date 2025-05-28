@@ -200,14 +200,25 @@ export default function ProfileScreen() {
             Change Photo
           </ThemedText>
 
-          {[{ label: "Username", value: profile.userName, editable: false },
+          {[
+            { label: "Username", value: profile.userName, editable: false },
             { label: "Email", value: email, onChangeText: setEmail },
-            { label: "Mobile Number", value: mobileNo, onChangeText: setMobileNo },
-            { label: "User ID", value: profile.userId || profile._id, editable: false },
-            { label: "Registered On", value: new Date(profile.createdDate).toLocaleDateString(), editable: false },
+            {
+              label: "Mobile Number",
+              value: mobileNo,
+              onChangeText: setMobileNo,
+            },
+            {
+              label: "User ID",
+              value: profile.userId || profile._id,
+              editable: false,
+            },
+            
           ].map((field, idx) => (
             <View key={idx}>
-              <ThemedText type="defaultSemiBold" style={styles.label}>{field.label}</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.label}>
+                {field.label}
+              </ThemedText>
               <TextInput
                 style={[styles.input, { borderColor: border, color: text }]}
                 value={field.value}
@@ -216,57 +227,55 @@ export default function ProfileScreen() {
               />
             </View>
           ))}
+          <View>
+            <ThemedText style={styles.label}>Street</ThemedText>
+            <TextInput
+              style={[styles.input, { borderColor: border, color: text }]}
+              value={address.street || ""}
+              placeholder="e.g. 123 Swanston St"
+              onChangeText={(text) => setAddress({ ...address, street: text })}
+            />
 
-          <View style={styles.addressGroup}>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>Country</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.country || ""}
-                onChangeText={(text) => setAddress({ ...address, country: text })}
-              />
+            <View style={styles.rowGroup}>
+              <View style={styles.halfBox}>
+                <ThemedText style={styles.label}>State</ThemedText>
+                <TextInput
+                  style={[styles.input, { borderColor: border, color: text }]}
+                  value={address.state || ""}
+                  placeholder="e.g. VIC"
+                  onChangeText={(text) =>
+                    setAddress({ ...address, state: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.halfBox}>
+                <ThemedText style={styles.label}>Postal Code</ThemedText>
+                <TextInput
+                  style={[styles.input, { borderColor: border, color: text }]}
+                  value={address.postalCode || ""}
+                  placeholder="e.g. 3000"
+                  onChangeText={(text) =>
+                    setAddress({ ...address, postalCode: text })
+                  }
+                />
+              </View>
             </View>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>State</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.state || ""}
-                onChangeText={(text) => setAddress({ ...address, state: text })}
-              />
-            </View>
+
+            <ThemedText style={styles.label}>Country</ThemedText>
+            <TextInput
+              style={[styles.input, { borderColor: border, color: text }]}
+              value={address.country || ""}
+              placeholder="e.g. Australia"
+              onChangeText={(text) => setAddress({ ...address, country: text })}
+            />
           </View>
 
-          <View style={styles.addressGroup}>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>City</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.city || ""}
-                onChangeText={(text) => setAddress({ ...address, city: text })}
-              />
-            </View>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>Postal Code</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.postalCode || ""}
-                onChangeText={(text) => setAddress({ ...address, postalCode: text })}
-              />
-            </View>
-          </View>
-
-          <View style={styles.addressGroup}>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>Country Code</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.countryCode || ""}
-                onChangeText={(text) => setAddress({ ...address, countryCode: text })}
-              />
-            </View>
-          </View>
-
-          <ThemedButton title="Save Changes" onPress={handleSave} style={styles.saveBtn} />
+          <ThemedButton
+            title="Save Changes"
+            onPress={handleSave}
+            style={styles.saveBtn}
+          />
         </View>
 
         <Modal
