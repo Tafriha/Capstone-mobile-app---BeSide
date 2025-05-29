@@ -6,6 +6,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Platform,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -13,10 +14,12 @@ import MapView, { Marker, Callout } from "react-native-maps";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Location from "expo-location";
 
+
 import { Colors } from "@/constants/Colors";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import ConsentModal from "./ConsentModal";
+import CompanionPreferencesModal from "./CompanionPreferencesModal";
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +36,7 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [consentVisible, setConsentVisible] = useState(false);
+  const [preferencesVisible, setPreferencesVisible] = useState(false);
   const [consent, setConsent] = useState({
     noTouch: false,
     respectful: false,
@@ -88,13 +92,20 @@ export default function HomeScreen() {
       router.replace("/login");
       return;
     }
+
     const parsed = JSON.parse(storedUser);
     if (parsed.isVerified) {
-      console.log("User is verified. Proceeding to next screen.");
-      // router.push("/companion"); // or handle companion finding logic
+      setConsentVisible(true); // SHOW CONSENT FORM FIRST
     } else {
-      setModalVisible(true);
+      setModalVisible(true); // NOT VERIFIED YET
     }
+  };
+
+  const handlePreferencesSubmit = async (preferences) => {
+    console.log("User Preferences:", preferences);
+    Alert.alert("Success", "Your companion preferences have been saved.");
+    setPreferencesVisible(false);
+    // You can now also call a backend function here to fetch matching users
   };
 
   return (
@@ -117,16 +128,6 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push("/profile")}>
               <ThemedText type="defaultSemiBold" style={styles.menuItem}>
                 Account
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setMenuVisible(false);
-                setConsentVisible(true);
-              }}
-            >
-              <ThemedText type="defaultSemiBold" style={styles.menuItem}>
-                Consent Form
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleLogout}>
@@ -198,7 +199,17 @@ export default function HomeScreen() {
         onClose={() => setConsentVisible(false)}
         consent={consent}
         setConsent={setConsent}
-        onSubmit={() => alert("Consent accepted. You're now TAPPED ON!")}
+        onSubmit={() => {
+          setConsentVisible(false);
+          setPreferencesVisible(true);
+        }}
+      />
+
+      {/* Preferences Modal */}
+      <CompanionPreferencesModal
+        visible={preferencesVisible}
+        onClose={() => setPreferencesVisible(false)}
+        onSubmit={handlePreferencesSubmit}
       />
     </View>
   );
