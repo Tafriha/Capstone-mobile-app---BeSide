@@ -29,7 +29,7 @@ export default function ResetPasswordScreen() {
 
     try {
       const response = await fetch(
-        `http://10.0.2.2:5001/api/v1/auth/resetPassword/${token}`,
+        `http://10.0.2.2:5000/api/v1/auth/resetPassword/${token}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

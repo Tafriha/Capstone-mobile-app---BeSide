@@ -69,10 +69,10 @@ exports.saveProfilePhoto = catchAsync(async (req, res, next) => {
 
 // Update profile visibility and shared information
 exports.updateProfileSettings = catchAsync(async (req, res, next) => {
-  const { public, sharedInfo } = req.body;
+  const { public: isPublic, sharedInfo } = req.body;
   const update = {};
 
-  if (typeof public === "boolean") update["profileSettings.public"] = public;
+  if (typeof isPublic === "boolean") update["profileSettings.public"] = isPublic;
   if (Array.isArray(sharedInfo)) update["profileSettings.sharedInfo"] = sharedInfo;
 
   if (Object.keys(update).length === 0) {

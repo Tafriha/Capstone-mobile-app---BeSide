@@ -6,6 +6,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Platform,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -13,9 +14,12 @@ import MapView, { Marker, Callout } from "react-native-maps";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Location from "expo-location";
 
+
 import { Colors } from "@/constants/Colors";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
+import ConsentModal from "./ConsentModal";
+import CompanionPreferencesModal from "./CompanionPreferencesModal";
 
 const { width } = Dimensions.get("window");
 
@@ -31,6 +35,13 @@ export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [consentVisible, setConsentVisible] = useState(false);
+  const [preferencesVisible, setPreferencesVisible] = useState(false);
+  const [consent, setConsent] = useState({
+    noTouch: false,
+    respectful: false,
+    safety: false,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -75,6 +86,28 @@ export default function HomeScreen() {
     router.replace("/login");
   };
 
+  const handleFindCompanion = async () => {
+    const storedUser = await AsyncStorage.getItem("user");
+    if (!storedUser) {
+      router.replace("/login");
+      return;
+    }
+
+    const parsed = JSON.parse(storedUser);
+    if (parsed.isVerified) {
+      setConsentVisible(true); // SHOW CONSENT FORM FIRST
+    } else {
+      setModalVisible(true); // NOT VERIFIED YET
+    }
+  };
+
+  const handlePreferencesSubmit = async (preferences) => {
+    console.log("User Preferences:", preferences);
+    Alert.alert("Success", "Your companion preferences have been saved.");
+    setPreferencesVisible(false);
+    // You can now also call a backend function here to fetch matching users
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -85,6 +118,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Menu Modal */}
       <Modal transparent animationType="fade" visible={menuVisible}>
         <TouchableOpacity
           style={styles.menuOverlay}
@@ -134,7 +168,7 @@ export default function HomeScreen() {
       {/* Find Companion Button */}
       <ThemedButton
         title="Find a Companion"
-        onPress={() => setModalVisible(true)}
+        onPress={handleFindCompanion}
         style={styles.actionButton}
       />
 
@@ -158,6 +192,25 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Consent Form Modal */}
+      <ConsentModal
+        visible={consentVisible}
+        onClose={() => setConsentVisible(false)}
+        consent={consent}
+        setConsent={setConsent}
+        onSubmit={() => {
+          setConsentVisible(false);
+          setPreferencesVisible(true);
+        }}
+      />
+
+      {/* Preferences Modal */}
+      <CompanionPreferencesModal
+        visible={preferencesVisible}
+        onClose={() => setPreferencesVisible(false)}
+        onSubmit={handlePreferencesSubmit}
+      />
     </View>
   );
 }
@@ -199,7 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     borderRadius: 10,
     padding: 12,
-    width: 160,
+    width: 180,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 10,
