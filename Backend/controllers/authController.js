@@ -197,6 +197,7 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     password,
     firstName,
     lastName,
+    gender,
     address = {},
   } = req.body;
 
@@ -251,6 +252,7 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     mobileNo,
     firstName,
     lastName,
+    gender,
     address: {
       street: address.street || "",
       city: address.city || "",

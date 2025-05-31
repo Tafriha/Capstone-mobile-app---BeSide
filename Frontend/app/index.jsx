@@ -5,6 +5,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
 import { Typography } from "@/constants/Typography";
+import { LogBox } from "react-native";
+LogBox.ignoreLogs([
+  "Support for defaultProps will be removed from function components",
+]);
+
 
 const { height } = Dimensions.get("window");
 
