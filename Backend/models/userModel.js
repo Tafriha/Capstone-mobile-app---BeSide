@@ -41,6 +41,10 @@ const UserSchema = new Schema(
       required: [true, "Last name is required"],
       trim: true,
     },
+    gender: {
+      type: String,
+      enum: ["male", "female", "non-binary", "prefer-not-to-say", "other"],
+    },
     mobileNo: {
       type: String,
       required: [true, "Mobile number is required"],

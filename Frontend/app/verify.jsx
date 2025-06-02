@@ -56,11 +56,7 @@ export default function VerifyScreen() {
     };
 
     try {
-<<<<<<< HEAD
-      const res = await fetch("http://10.0.2.2:5001/api/v1/auth/verify", {
-=======
       const res = await fetch("http://172.20.10.2:5000/api/v1/auth/verify", {
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -113,21 +109,8 @@ export default function VerifyScreen() {
         { placeholder: "First Name", value: firstName, setValue: setFirstName },
         { placeholder: "Last Name", value: lastName, setValue: setLastName },
         { placeholder: "ID Number", value: number, setValue: setNumber },
-<<<<<<< HEAD
-        {
-          placeholder: "Expiry Date (DD-MM-YYYY)",
-          value: expiry,
-          setValue: setExpiry,
-        },
-        {
-          placeholder: "Date of Birth (DD-MM-YYYY)",
-          value: dob,
-          setValue: setDob,
-        },
-=======
         { placeholder: "Expiry Date (DD-MM-YYYY)", value: expiry, setValue: setExpiry },
         { placeholder: "Date of Birth (DD-MM-YYYY)", value: dob, setValue: setDob },
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
       ].map((field, index) => (
         <TextInput
           key={index}
