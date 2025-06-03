@@ -15,6 +15,7 @@ import {
   Modal,
   Animated,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,7 +23,7 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
+const API_BASE_URL = "http://10.0.2.2:5001/api/v1/user";
 const { width, height } = Dimensions.get("window");
 
 export default function ProfileScreen() {
@@ -47,12 +48,15 @@ export default function ProfileScreen() {
     mobileNo: true,
     country: true,
     state: true,
+    postalCode: true,
     city: true,
     gender: true,
     bio: true,
     userName: true,
   });
   const [originalVisibility, setOriginalVisibility] = useState({});
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -60,6 +64,7 @@ export default function ProfileScreen() {
   const secondary = useThemeColor({}, "secondary");
   const text = useThemeColor({}, "text");
   const surface = useThemeColor({}, "surface");
+  const muted = useThemeColor({}, "muted");
 
   useEffect(() => {
     fetchProfile();
@@ -94,7 +99,8 @@ export default function ProfileScreen() {
         setBio(user.bio || "");
         setPhoto(user.profilePhoto?.url || null);
         setAddress(user.address || { city: "", state: "", country: "" });
-
+        setConsentGiven(user.consentGiven || false);
+        setIsPublic(user.profileSettings?.public || false);
         const sharedInfo = user.profileSettings?.sharedInfo || [];
         const newVisibility = {
           email: sharedInfo.includes("email"),
@@ -102,9 +108,10 @@ export default function ProfileScreen() {
           country: sharedInfo.includes("country"),
           state: sharedInfo.includes("state"),
           city: sharedInfo.includes("city"),
+          postalCode: sharedInfo.includes("postalCode"),
           gender: sharedInfo.includes("gender"),
           bio: sharedInfo.includes("bio"),
-          userName: sharedInfo.includes("userName"),
+          userName: true,
         };
         setVisibility(newVisibility);
         setOriginalVisibility(newVisibility);
@@ -193,9 +200,20 @@ export default function ProfileScreen() {
       Alert.alert("Validation Error", "Email and Mobile Number are required.");
       return;
     }
+
+    const payload = {
+      firstName,
+      lastName,
+      email,
+      mobileNo,
+      bio,
+      ...(gender && { gender }),
+      address,
+    };
     setSaving(true);
     const token = await AsyncStorage.getItem("token");
     try {
+      console.log("Sending payload:", payload);
       const res = await fetch(`${API_BASE_URL}/profile`, {
         method: "PUT",
         headers: {
@@ -211,8 +229,10 @@ export default function ProfileScreen() {
           gender,
           address,
         }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+      console.log("Backend response:", data);
       if (res.ok) {
         Alert.alert("Success", "Profile Updated");
         setEditMode(false);
@@ -221,6 +241,7 @@ export default function ProfileScreen() {
         Alert.alert("Error", data.message || "Failed to update profile.");
       }
     } catch (e) {
+      console.log("Error during save:", e.message);
       Alert.alert("Error", "Failed to update profile: " + e.message);
     } finally {
       setSaving(false);
@@ -237,14 +258,21 @@ export default function ProfileScreen() {
       router.replace("/login");
       return;
     }
-
     try {
       const sharedInfo = Object.keys(visibility).filter(
-        (key) => visibility[key]
+        (key) =>
+          visibility[key] &&
+          [
+            "email",
+            "mobileNo",
+            "country",
+            "state",
+            "city",
+            "gender",
+            "bio",
+          ].includes(key)
       );
-      const payload = { public: false, sharedInfo };
-      console.log("Saving visibility with payload:", payload);
-
+      const payload = { public: isPublic, sharedInfo };
       const res = await fetch(`${API_BASE_URL}/profile-settings`, {
         method: "PUT",
         headers: {
@@ -254,35 +282,20 @@ export default function ProfileScreen() {
         },
         body: JSON.stringify(payload),
       });
-
-      console.log("Response status:", res.status);
       const data = await res.json();
-      console.log("Visibility save response:", data);
-
-      if (!res.ok) {
-        let errorMessage = "Unknown error";
-        try {
-          errorMessage = data.message || `HTTP error ${res.status}`;
-        } catch {
-          const errorText = await res.text();
-          errorMessage = `HTTP error ${res.status}: ${errorText}`;
-        }
-        console.log("Visibility save failed:", errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      if (data.status === "success") {
+      if (res.ok) {
         const updatedSharedInfo =
           data.data?.user?.profileSettings?.sharedInfo || sharedInfo;
         setVisibility({
           email: updatedSharedInfo.includes("email"),
           mobileNo: updatedSharedInfo.includes("mobileNo"),
           country: updatedSharedInfo.includes("country"),
+          postalCode: sharedInfo.includes("postalCode"),
           state: updatedSharedInfo.includes("state"),
           city: updatedSharedInfo.includes("city"),
           gender: updatedSharedInfo.includes("gender"),
           bio: updatedSharedInfo.includes("bio"),
-          userName: updatedSharedInfo.includes("userName"),
+          userName: true,
         });
         setOriginalVisibility({ ...visibility });
         Alert.alert("Success", "Visibility Updated");
@@ -319,46 +332,166 @@ export default function ProfileScreen() {
   };
 
   const toggleVisibility = (field) => {
-    setVisibility((prev) => ({ ...prev, [field]: !prev[field] }));
+    if (
+      [
+        "email",
+        "mobileNo",
+        "country",
+        "postalcode",
+        "state",
+        "city",
+        "gender",
+        "bio",
+      ].includes(field)
+    ) {
+      setVisibility((prev) => ({ ...prev, [field]: !prev[field] }));
+    }
   };
 
   const handleSettingsPress = () => {
     setSettingsModalVisible(true);
   };
 
-  const renderField = (label, value, editable, onChangeText) => (
+  const renderField = (label, value, editable, onChangeText, type = "text") => (
     <View style={styles.fieldContainer}>
       <Text style={[styles.label, { color: text }]}>{label}</Text>
-      <TextInput
-        style={[
-          styles.input,
-          { borderColor: border, color: text, backgroundColor: surface },
-        ]}
-        value={value}
-        onChangeText={onChangeText}
-        editable={editable}
-        accessibilityLabel={label}
-        accessibilityRole="text"
-      />
+      {type === "picker" ? (
+        <View
+          style={[
+            styles.input,
+            {
+              borderColor: border,
+              backgroundColor: surface,
+              paddingVertical: 0,
+              justifyContent: "center",
+            },
+          ]}
+        >
+          {editable ? (
+            <Picker
+              selectedValue={value}
+              onValueChange={(itemValue) => onChangeText(itemValue)}
+              style={{ color: text, fontFamily: "SpaceMono" }}
+              enabled={editable}
+              accessibilityLabel={`Select ${label}`}
+              accessibilityRole="combobox"
+            >
+              <Picker.Item label="Select Gender" value="" />
+              <Picker.Item label="Female" value="Female" />
+              <Picker.Item label="Male" value="Male" />
+              <Picker.Item label="Non-binary" value="Non-binary" />
+              <Picker.Item label="Other" value="Other" />
+              <Picker.Item
+                label="Prefer not to say"
+                value="Prefer not to say"
+              />
+            </Picker>
+          ) : (
+            <Text style={[styles.inputText, { color: text }]}>
+              {value || "Not specified"}
+            </Text>
+          )}
+        </View>
+      ) : (
+        <TextInput
+          style={[
+            styles.input,
+            { borderColor: border, color: text, backgroundColor: surface },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          editable={editable}
+          accessibilityLabel={label}
+          accessibilityRole="text"
+        />
+      )}
     </View>
   );
 
   const renderVisibilityField = (label, fieldKey) => (
     <View style={styles.visibilityField}>
       <Text style={[styles.label, { color: text }]}>{label}</Text>
-      <TouchableOpacity
-        onPress={() => toggleVisibility(fieldKey)}
-        accessibilityLabel={`Toggle ${label} visibility`}
-        accessibilityRole="button"
-      >
-        <MaterialIcons
-          name={visibility[fieldKey] ? "visibility" : "visibility-off"}
-          size={24}
-          color={text}
-        />
-      </TouchableOpacity>
+      {[
+        "email",
+        "mobileNo",
+        "country",
+        "state",
+        "city",
+        "gender",
+        "bio",
+      ].includes(fieldKey) ? (
+        <TouchableOpacity
+          onPress={() => toggleVisibility(fieldKey)}
+          accessibilityLabel={`Toggle ${label} visibility`}
+          accessibilityRole="button"
+        >
+          <MaterialIcons
+            name={visibility[fieldKey] ? "visibility" : "visibility-off"}
+            size={24}
+            color={text}
+          />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
+
+  const handleDeleteProfile = async () => {
+    Alert.alert(
+      "Delete Profile",
+      "Are you sure you want to delete your profile? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          onPress: async () => {
+            const token = await AsyncStorage.getItem("token");
+            try {
+              const res = await fetch(`${API_BASE_URL}/profile`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok) {
+                await AsyncStorage.removeItem("token");
+                Alert.alert("Success", "Profile deleted");
+                router.replace("/login");
+              } else {
+                const data = await res.json();
+                Alert.alert(
+                  "Error",
+                  data.message || "Failed to delete profile."
+                );
+              }
+            } catch (e) {
+              Alert.alert("Error", "Failed to delete profile: " + e.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const updateConsent = async () => {
+    const token = await AsyncStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/consent`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ consentGiven: !consentGiven }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConsentGiven(!consentGiven);
+        Alert.alert("Success", "Consent updated");
+      } else {
+        Alert.alert("Error", data.message || "Failed to update consent.");
+      }
+    } catch (e) {
+      Alert.alert("Error", "Failed to update consent: " + e.message);
+    }
+  };
 
   if (loading) {
     return (
@@ -406,6 +539,14 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <TouchableOpacity
+              style={[styles.goBackButton]}
+              onPress={() => router.back()}
+              accessibilityLabel="Go back from Settings"
+              accessibilityRole="button"
+            >
+              <MaterialIcons name="arrow-back" size={30} color={text} />
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.settingsButton, { backgroundColor: `${text}20` }]}
               onPress={handleSettingsPress}
               accessibilityLabel="Open Settings"
@@ -413,47 +554,82 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="settings" size={28} color={text} />
             </TouchableOpacity>
-            <Animated.View
-              style={[styles.profileSection, { opacity: fadeAnim }]}
+          </View>
+          <Animated.View style={[styles.profileSection, { opacity: fadeAnim }]}>
+            <TouchableOpacity
+              onPress={() => setPhotoModalVisible(true)}
+              accessibilityLabel="View or change profile photo"
+              accessibilityRole="button"
             >
+              <Image
+                source={{ uri: photo || "https://via.placeholder.com/150" }}
+                style={[
+                  styles.profileImage,
+                  editMode && { borderColor: border, borderWidth: 2 },
+                ]}
+                accessibilityLabel="User's profile photo"
+              />
+            </TouchableOpacity>
+            <Modal
+              animationType="fade"
+              transparent={true}
+              visible={photoModalVisible}
+              onRequestClose={() => setPhotoModalVisible(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View
+                  style={[styles.photoModalView, { backgroundColor: surface }]}
+                >
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setPhotoModalVisible(false)}
+                    accessibilityLabel="Close Profile Picture Modal"
+                    accessibilityRole="button"
+                  >
+                    <MaterialIcons name="close" size={24} color={text} />
+                  </TouchableOpacity>
+                  <Image
+                    source={{ uri: photo || "https://via.placeholder.com/150" }}
+                    style={styles.fullScreenImage}
+                    accessibilityLabel="Full-screen profile photo"
+                  />
+                </View>
+              </View>
+            </Modal>
+            {editMode && (
               <TouchableOpacity
-                onPress={() => setPhotoModalVisible(true)}
-                accessibilityLabel="View or change profile photo"
+                style={styles.editPhotoButton}
+                onPress={pickImage}
+                accessibilityLabel="Change Profile Photo"
                 accessibilityRole="button"
               >
-                <Image
-                  source={{ uri: photo || "https://via.placeholder.com/150" }}
-                  style={[
-                    styles.profileImage,
-                    editMode && { borderColor: border, borderWidth: 2 },
-                  ]}
-                  accessibilityLabel="User's profile photo"
-                />
+                <MaterialIcons name="edit" size={24} color={text} />
               </TouchableOpacity>
-              {editMode && (
-                <TouchableOpacity
-                  style={styles.editPhotoButton}
-                  onPress={pickImage}
-                  accessibilityLabel="Change Profile Photo"
-                  accessibilityRole="button"
-                >
-                  <MaterialIcons name="edit" size={24} color={text} />
-                </TouchableOpacity>
+            )}
+            <View style={styles.nameSection}>
+              <Text
+                style={[styles.name, { color: text }]}
+                accessibilityLabel={`User's name: ${firstName} ${lastName}`}
+                accessibilityRole="text"
+              >
+                {firstName} {lastName}
+              </Text>
+              <Text style={[styles.subtext, { color: text }]}>
+                User ID: {profile.userId || "Not generated"}
+              </Text>
+              <Text style={[styles.subtext, { color: text }]}>
+                {profile?.tripCount || "0"} Trips Completed
+              </Text>
+              {profile.isVerified && (
+                <Text style={[styles.subtext, { color: "green" }]}>
+                  Verified
+                </Text>
               )}
-              <View style={styles.nameSection}>
-                <Text
-                  style={[styles.name, { color: text }]}
-                  accessibilityLabel={`User's name: ${firstName} ${lastName}`}
-                  accessibilityRole="text"
-                >
-                  {firstName} {lastName}
-                </Text>
-                <Text style={[styles.subtext, { color: text }]}>
-                  {profile?.tripCount || "0"} Trips Completed
-                </Text>
-              </View>
-            </Animated.View>
-          </View>
+              <Text style={[styles.subtext, { color: text }]}>
+                Status: {profile.accountStatus}
+              </Text>
+            </View>
+          </Animated.View>
 
           <View style={styles.infoContainer}>
             {renderField("First Name", firstName, editMode, setFirstName)}
@@ -461,7 +637,8 @@ export default function ProfileScreen() {
             {renderField("Email", email, editMode, setEmail)}
             {renderField("Mobile Number", mobileNo, editMode, setMobileNo)}
             {renderField("Bio", bio, editMode, setBio)}
-            {renderField("Gender", gender, editMode, setGender)}
+            {renderField("Gender", gender, editMode, setGender, "picker")}{" "}
+            {/* Add type="picker" */}
             {renderField("City", address.city || "", editMode, (text) =>
               setAddress((prev) => ({ ...prev, city: text }))
             )}
@@ -470,6 +647,12 @@ export default function ProfileScreen() {
             )}
             {renderField("Country", address.country || "", editMode, (text) =>
               setAddress((prev) => ({ ...prev, country: text }))
+            )}
+            {renderField(
+              "Postal Code",
+              address.postalCode || "",
+              editMode,
+              (text) => setAddress((prev) => ({ ...prev, postalCode: text }))
             )}
           </View>
 
@@ -482,7 +665,7 @@ export default function ProfileScreen() {
                 accessibilityRole="button"
               >
                 <LinearGradient
-                  colors={[border, secondary]}
+                  colors={["#EBB7AD", "#FBE6DA"]}
                   style={styles.button}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -503,7 +686,7 @@ export default function ProfileScreen() {
                 accessibilityRole="button"
               >
                 <LinearGradient
-                  colors={["#ccc", "#aaa"]}
+                  colors={["#EBB7AD", "#FBE6DA"]}
                   style={styles.button}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -514,42 +697,95 @@ export default function ProfileScreen() {
             </View>
           )}
         </ScrollView>
-
         <Modal
           animationType="fade"
           transparent={true}
-          visible={photoModalVisible}
-          onRequestClose={() => {
-            setPhotoModalVisible(false);
-            console.log("Photo modal closed");
-          }}
+          visible={previewVisible}
+          onRequestClose={() => setPreviewVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.photoModalView, { backgroundColor: surface }]}>
+            <View style={[styles.modalView, { backgroundColor: surface }]}>
               <TouchableOpacity
-                style={[styles.modalCloseButton, { zIndex: 1 }]}
-                onPress={() => {
-                  setPhotoModalVisible(false);
-                  console.log("Close button pressed");
-                }}
-                accessibilityLabel="Close Photo Modal"
+                style={styles.closeButton}
+                onPress={() => setPreviewVisible(false)}
+                accessibilityLabel="Close Preview"
                 accessibilityRole="button"
               >
                 <MaterialIcons name="close" size={24} color={text} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalChangeButton}
-                onPress={pickImage}
-                accessibilityLabel="Change Profile Photo"
-                accessibilityRole="button"
-              >
-                <MaterialIcons name="edit" size={24} color={text} />
-              </TouchableOpacity>
-              <Image
-                source={{ uri: photo || "https://via.placeholder.com/150" }}
-                style={styles.largePhoto}
-                accessibilityLabel="Enlarged profile photo"
-              />
+              <Text style={[styles.modalTitle, { color: text }]}>
+                Profile Preview
+              </Text>
+              <ScrollView>
+                <View style={styles.profileSection}>
+                  <Image
+                    source={{ uri: photo || "https://via.placeholder.com/150" }}
+                    style={styles.profileImage}
+                  />
+                  <View style={styles.nameSection}>
+                    <Text style={[styles.name, { color: text }]}>
+                      {firstName} {lastName}
+                    </Text>
+                    <Text style={[styles.subtext, { color: text }]}>
+                      User ID: {profile.userId || "Not generated"}
+                    </Text>
+                    <Text style={[styles.subtext, { color: text }]}>
+                      {profile?.tripCount || "0"} Trips Completed
+                    </Text>
+                    {profile.isVerified && (
+                      <Text style={[styles.subtext, { color: "green" }]}>
+                        Verified
+                      </Text>
+                    )}
+                    <Text style={[styles.subtext, { color: text }]}>
+                      Status: {profile.accountStatus}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.infoContainer}>
+                  {visibility.email && email ? (
+                    <Text style={[styles.label, { color: text }]}>
+                      Email: {email}
+                    </Text>
+                  ) : null}
+                  {visibility.mobileNo && mobileNo ? (
+                    <Text style={[styles.label, { color: text }]}>
+                      Mobile: {mobileNo}
+                    </Text>
+                  ) : null}
+                  {visibility.gender && gender ? (
+                    <Text style={[styles.label, { color: text }]}>
+                      Gender: {gender}
+                    </Text>
+                  ) : null}
+                  {(visibility.country ||
+                    visibility.state ||
+                    visibility.city ||
+                    visibility.postalCode) &&
+                  address ? (
+                    <Text style={[styles.label, { color: text }]}>
+                      Address:
+                      {visibility.city && address.city
+                        ? address.city + ", "
+                        : ""}
+                      {visibility.state && address.state
+                        ? address.state + ", "
+                        : ""}
+                      {visibility.country && address.country
+                        ? address.country
+                        : ""}
+                      {visibility.postalCode && address.postalCode
+                        ? " " + address.postalCode
+                        : ""}
+                    </Text>
+                  ) : null}
+                  {visibility.bio && bio ? (
+                    <Text style={[styles.label, { color: text }]}>
+                      Bio: {bio}
+                    </Text>
+                  ) : null}
+                </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -613,6 +849,19 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalOption, { borderBottomColor: border }]}
+                onPress={handleDeleteProfile}
+                accessibilityLabel="Delete Profile"
+                accessibilityRole="button"
+              >
+                <View style={styles.modalOptionRow}>
+                  <MaterialIcons name="delete" size={24} color={text} />
+                  <Text style={[styles.modalText, { color: text }]}>
+                    Delete Profile
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalOption, { borderBottomColor: border }]}
                 onPress={() => {
                   setSettingsModalVisible(false);
                   handleLogout();
@@ -655,14 +904,15 @@ export default function ProfileScreen() {
                     Preview
                   </Text>
                 </TouchableOpacity>
-                {renderVisibilityField("📧 Email", "email")}
-                {renderVisibilityField("📱 Mobile Number", "mobileNo")}
-                {renderVisibilityField("🌍 Country", "country")}
-                {renderVisibilityField("🏙️ State", "state")}
-                {renderVisibilityField("🏘️ City", "city")}
-                {renderVisibilityField("🚻 Gender", "gender")}
-                {renderVisibilityField("📝 Bio", "bio")}
-                {renderVisibilityField("Username", "userName")}
+                {renderVisibilityField("Email", "email")}
+                {renderVisibilityField("Mobile Number", "mobileNo")}
+                {renderVisibilityField("City", "city")}
+                {renderVisibilityField("State", "state")}
+                {renderVisibilityField("Country", "country")}
+                {renderVisibilityField("Gender", "gender")}
+                {renderVisibilityField("Bio", "bio")}
+                <View style={styles.visibilityField}>
+                </View>
               </ScrollView>
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
@@ -670,14 +920,7 @@ export default function ProfileScreen() {
                   accessibilityLabel="Save Visibility Changes"
                   accessibilityRole="button"
                 >
-                  <LinearGradient
-                    colors={[border, secondary]}
-                    style={styles.button}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <Text style={styles.buttonText}>Save Changes</Text>
-                  </LinearGradient>
+                  <Text style={styles.buttonText}>Save Changes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -687,14 +930,7 @@ export default function ProfileScreen() {
                   accessibilityLabel="Cancel Visibility Changes"
                   accessibilityRole="button"
                 >
-                  <LinearGradient
-                    colors={["#ccc", "#aaa"]}
-                    style={styles.button}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </LinearGradient>
+                  <Text style={styles.buttonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -731,16 +967,22 @@ export default function ProfileScreen() {
                       {firstName} {lastName}
                     </Text>
                     <Text style={[styles.subtext, { color: text }]}>
+                      User ID: {profile.userId || "Not generated"}
+                    </Text>
+                    <Text style={[styles.subtext, { color: text }]}>
                       {profile?.tripCount || "0"} Trips Completed
+                    </Text>
+                    {profile.isVerified && (
+                      <Text style={[styles.subtext, { color: "green" }]}>
+                        Verified
+                      </Text>
+                    )}
+                    <Text style={[styles.subtext, { color: text }]}>
+                      Status: {profile.accountStatus}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.infoContainer}>
-                  {visibility.userName && firstName && lastName ? (
-                    <Text style={[styles.label, { color: text }]}>
-                      Username: {firstName} {lastName}
-                    </Text>
-                  ) : null}
                   {visibility.email && email ? (
                     <Text style={[styles.label, { color: text }]}>
                       Email: {email}
@@ -751,45 +993,37 @@ export default function ProfileScreen() {
                       Mobile: {mobileNo}
                     </Text>
                   ) : null}
-                  {visibility.bio && bio ? (
-                    <Text style={[styles.label, { color: text }]}>
-                      Bio: {bio}
-                    </Text>
-                  ) : null}
                   {visibility.gender && gender ? (
                     <Text style={[styles.label, { color: text }]}>
                       Gender: {gender}
                     </Text>
                   ) : null}
-                  {visibility.city && address.city ? (
+                  {(visibility.country ||
+                    visibility.state ||
+                    visibility.city ||
+                    visibility.postalCode) &&
+                  address ? (
                     <Text style={[styles.label, { color: text }]}>
-                      City: {address.city}
+                      Address:
+                      {visibility.city && address.city
+                        ? address.city + ", "
+                        : ""}
+                      {visibility.state && address.state
+                        ? address.state + ", "
+                        : ""}
+                      {visibility.country && address.country
+                        ? address.country
+                        : ""}
+                      {visibility.postalCode && address.postalCode
+                        ? " " + address.postalCode
+                        : ""}
                     </Text>
                   ) : null}
-                  {visibility.state && address.state ? (
+                  {visibility.bio && bio ? (
                     <Text style={[styles.label, { color: text }]}>
-                      State: {address.state}
+                      Bio: {bio}
                     </Text>
                   ) : null}
-                  {visibility.country && address.country ? (
-                    <Text style={[styles.label, { color: text }]}>
-                      Country: {address.country}
-                    </Text>
-                  ) : null}
-                  {!(
-                    (visibility.userName && firstName && lastName) ||
-                    (visibility.email && email) ||
-                    (visibility.mobileNo && mobileNo) ||
-                    (visibility.bio && bio) ||
-                    (visibility.gender && gender) ||
-                    (visibility.city && address.city) ||
-                    (visibility.state && address.state) ||
-                    (visibility.country && address.country)
-                  ) && (
-                    <Text style={[styles.label, { color: text }]}>
-                      No visible profile information to display.
-                    </Text>
-                  )}
                 </View>
               </ScrollView>
             </View>
@@ -808,27 +1042,23 @@ const styles = StyleSheet.create({
     padding: 20,
     flexGrow: 1,
   },
+  container: { flex: 1 },
+  scrollContent: { padding: 20, flexGrow: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 20,
-    padding: 10,
+    paddingHorizontal: 10,
+    width: "100%",
   },
-  settingsButton: {
-    padding: 12,
-    borderRadius: 20,
-    marginRight: 15,
-  },
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  settingsButton: { padding: 12, borderRadius: 20 },
+  profileSection: { flexDirection: "row", alignItems: "center" },
   profileImage: {
     width: width * 0.2,
     height: width * 0.2,
     borderRadius: (width * 0.2) / 2,
     borderWidth: 1,
-    borderColor: "#EBB7AD",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -836,13 +1066,33 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   editPhotoButton: {
-    marginLeft: 10,
-    padding: 8,
+    padding: 3,
+    borderRadius: 13,
+    position: "flex-end",
+    backgroundColor: "#EBB7AD",
+    top: 10,
+    right: 10,
+  },
+  modalCloseButton: {
+    backgroundColor: "#f0f0f0",
+    padding: 4,
     borderRadius: 20,
-    backgroundColor: "border" + 20,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    top: 10,
+    right: 10,
   },
   nameSection: {
     marginLeft: 15,
+    marginRight: 15,
+    flex: 1,
+    flexDirection: "column",
+  },
+  subtext: {
+    fontSize: 15,
+    fontFamily: "SpaceMono",
+    marginBottom: 4,
   },
   name: {
     fontSize: 28,
@@ -854,19 +1104,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  subtext: {
-    fontSize: 16,
-    fontFamily: "SpaceMono",
-  },
-  infoContainer: {
-    alignItems: "center",
-    marginRight: 10,
-    marginBottom: 20,
-  },
-  fieldContainer: {
-    width: "100%",
-    marginBottom: 20,
-  },
+  infoContainer: { alignItems: "center", marginRight: 10, marginBottom: 20 },
+  fieldContainer: { width: "100%", marginBottom: 20 },
   label: {
     fontSize: 16,
     fontWeight: "500",
@@ -881,11 +1120,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "SpaceMono",
   },
+  inputText: {
+    fontSize: 16,
+    fontFamily: "SpaceMono",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
   button: {
     flex: 1,
     padding: 12,
     borderRadius: 12,
     alignItems: "center",
+    borderWidth: 1.5,
     marginHorizontal: 5,
     ...(Platform.OS === "ios"
       ? {
@@ -894,20 +1140,10 @@ const styles = StyleSheet.create({
           shadowOpacity: 0.2,
           shadowRadius: 4,
         }
-      : {
-          elevation: 4,
-        }),
+      : { elevation: 4 }),
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    fontFamily: "SpaceMono",
-  },
-  loading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  buttonText: { fontSize: 16, fontWeight: "bold", fontFamily: "SpaceMono" },
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
@@ -925,12 +1161,39 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  photoModalView: {
-    position: "relative",
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  photoModalView: {
+    width: width * 0.9,
     borderRadius: 12,
-    marginHorizontal: 20,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#ffffff90",
+    borderRadius: 20,
+    shadowColor: "black",
+    borderWidth: 3,
+    padding: 8,
+    zIndex: 1,
+  },
+  fullScreenImage: {
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: 12,
+    resizeMode: "cover",
   },
   largePhoto: {
     width: width * 0.8,
@@ -961,10 +1224,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
-  modalOption: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-  },
+  modalOption: { paddingVertical: 15, borderBottomWidth: 1 },
   modalText: {
     fontSize: 18,
     textAlign: "center",
@@ -990,24 +1250,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
   },
-  previewButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  previewText: {
-    marginLeft: 5,
-    fontSize: 16,
-    fontFamily: "SpaceMono",
-  },
+  previewButton: { flexDirection: "row", alignItems: "center" },
+  previewText: { marginLeft: 5, fontSize: 16, fontFamily: "SpaceMono" },
   closeButton: {
     position: "absolute",
     top: 10,
     right: 10,
+    borderWidth: 2,
+    borderRadius: 8,
   },
   buttonContainer: {
     flexDirection: "row",
     color: "#fff",
+    shadowColor: "black",
     justifyContent: "space-between",
     marginTop: 20,
+  },
+  goBackButton: {
+    flexDirection: "row",
+    zIndex: 2,
   },
 });
