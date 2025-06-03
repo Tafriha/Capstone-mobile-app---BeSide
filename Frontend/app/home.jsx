@@ -332,8 +332,8 @@ export default function HomeScreen() {
       const user = JSON.parse(storedUser);
       const API_URL =
         Platform.OS === "android"
-          ? "http://10.0.2.2:5001"
-          : "http://localhost:5001";
+          ? "http://10.0.2.2:5000"
+          : "http://localhost:5000";
 
       const response = await fetch(
         `${API_URL}/api/v1/trip-request/createTripReq`,
@@ -504,8 +504,8 @@ export default function HomeScreen() {
       const user = JSON.parse(storedUser);
       const API_URL =
         Platform.OS === "android"
-          ? "http://10.0.2.2:5001"
-          : "http://localhost:5001";
+          ? "http://10.0.2.2:5000"
+          : "http://localhost:5000";
 
       const response = await fetch(
         `${API_URL}/api/v1/trip-request/sendRequest`,

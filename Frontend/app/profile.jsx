@@ -23,7 +23,7 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const API_BASE_URL = "http://10.0.2.2:5001/api/v1/user";
+const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
 const { width, height } = Dimensions.get("window");
 
 export default function ProfileScreen() {
@@ -911,8 +911,7 @@ export default function ProfileScreen() {
                 {renderVisibilityField("Country", "country")}
                 {renderVisibilityField("Gender", "gender")}
                 {renderVisibilityField("Bio", "bio")}
-                <View style={styles.visibilityField}>
-                </View>
+                <View style={styles.visibilityField}></View>
               </ScrollView>
               <View style={styles.buttonContainer}>
                 <TouchableOpacity

@@ -53,7 +53,7 @@ export default function PhotoUploadModal({ visible, onClose, onSubmit }) {
     try {
       const storedUser = await AsyncStorage.getItem("user");
       console.log("Stored User Raw JSON:", storedUser);
-      
+
       if (!storedUser) {
         Alert.alert("Error", "User not logged in. Please log in again.");
         onClose();
@@ -70,7 +70,6 @@ export default function PhotoUploadModal({ visible, onClose, onSubmit }) {
         onClose();
         return;
       }
-      
 
       const formData = new FormData();
       formData.append("photo", {
@@ -81,8 +80,8 @@ export default function PhotoUploadModal({ visible, onClose, onSubmit }) {
 
       const API_URL =
         Platform.OS === "android"
-          ? "http://10.0.2.2:5001"
-          : "http://localhost:5001";
+          ? "http://10.0.2.2:5000"
+          : "http://localhost:5000";
       const response = await fetch(
         `${API_URL}/api/v1/trip-request/upload-photo`,
         {
