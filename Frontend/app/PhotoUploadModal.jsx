@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedButton } from "@/components/ThemedButton";
 
 export default function PhotoUploadModal({ visible, onClose, onSubmit }) {
@@ -51,60 +50,13 @@ export default function PhotoUploadModal({ visible, onClose, onSubmit }) {
     }
 
     try {
-      const storedUser = await AsyncStorage.getItem("user");
-      console.log("Stored User Raw JSON:", storedUser);
-
-      if (!storedUser) {
-        Alert.alert("Error", "User not logged in. Please log in again.");
-        onClose();
-        return;
-      }
-
-      const user = JSON.parse(storedUser);
-      console.log("User Token:", user.token); // Debug log
-      if (!user.token) {
-        Alert.alert(
-          "Error",
-          "Authentication token missing. Please log in again."
-        );
-        onClose();
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("photo", {
-        uri: photo,
-        type: "image/jpeg",
-        name: `selfie-${Date.now()}.jpg`,
-      });
-
-      const API_URL =
-        Platform.OS === "android"
-          ? "http://10.0.2.2:5000"
-          : "http://localhost:5000";
-      const response = await fetch(
-        `${API_URL}/api/v1/trip-request/upload-photo`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
-
-      const result = await response.json();
-      if (result.status === "success") {
-        onSubmit(result.data.photoUrl);
-        setPhoto(null);
-      } else {
-        throw new Error(result.message || "Failed to upload photo");
-      }
+      onSubmit(photo);
+      setPhoto(null);
     } catch (error) {
-      console.error("Fetch Error:", error);
+      console.error("Error:", error);
       Alert.alert(
         "Error",
-        error.message || "Failed to upload photo. Please try again."
+        "Failed to process photo. Please try again."
       );
     }
   };

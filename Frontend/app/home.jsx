@@ -169,6 +169,8 @@ export default function HomeScreen() {
   const [searchTimer, setSearchTimer] = useState(null);
   const loadingAnimation = useRef(new Animated.Value(0)).current;
   const mapRef = useRef(null);
+  const [currentTripRequestId, setCurrentTripRequestId] = useState(null);
+  const [showRadius, setShowRadius] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -279,143 +281,136 @@ export default function HomeScreen() {
 
   const handleFindCompanion = async () => {
     const storedUser = await AsyncStorage.getItem("user");
-    if (!storedUser) {
+    const token = await AsyncStorage.getItem("token");
+    if (!storedUser || !token) {
       router.replace("/login");
       return;
     }
     const parsed = JSON.parse(storedUser);
     if (parsed.isVerified) {
-      setConsentVisible(true);
+      // Create trip request first
+      try {
+        const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
+        const response = await fetch(`${API_URL}/api/v1/trip/createTripReq`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            user: {
+              userId: parsed._id,
+              userName: parsed.userName,
+              userImage: parsed.userImage || "default.jpg",
+            },
+            destination: "Placeholder", // Will be updated later
+            destinationType: "By Walk", // Will be updated later
+            date: new Date(),
+            time: "12:00", // Will be updated later
+            genderPreference: "any", // Will be updated later
+          }),
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          setCurrentTripRequestId(result.data.tripRequest.tripReqId);
+          setConsentVisible(true);
+        } else {
+          throw new Error(result.message || "Failed to create trip request");
+        }
+      } catch (error) {
+        Alert.alert("Error", error.message || "Failed to create trip request.");
+        return;
+      }
     } else {
       setModalVisible(true);
     }
   };
 
-  const handlePhotoSubmit = (url) => {
-    setPhotoUrl(url);
-    setPhotoUploadVisible(false);
-    setPreferencesVisible(true);
-  };
-
-  const mapGenderPreference = (frontendPref) => {
-    switch (frontendPref) {
-      case "male":
-        return "Man";
-      case "female":
-        return "Woman";
-      case "nonbinary":
-        return "LGBTQ+";
-      case "any":
-      default:
-        return "Other";
-    }
-  };
-
-  const handlePreferencesSubmit = async (preferences) => {
-    console.log("User Preferences:", preferences);
-    console.log("Photo URL:", photoUrl);
-    setPreferencesVisible(false);
-
-    if (!photoUrl) {
-      Alert.alert("Error", "A selfie is required to create a trip.");
+  const handlePhotoSubmit = async (url) => {
+    if (!currentTripRequestId) {
+      Alert.alert("Error", "No active trip request found.");
       return;
     }
 
     try {
       const storedUser = await AsyncStorage.getItem("user");
-      if (!storedUser) {
+      const token = await AsyncStorage.getItem("token");
+      if (!storedUser || !token) {
         Alert.alert("Error", "User not logged in.");
         router.replace("/login");
         return;
       }
 
       const user = JSON.parse(storedUser);
-      const API_URL =
-        Platform.OS === "android"
-          ? "http://10.0.2.2:5000"
-          : "http://localhost:5000";
+      const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
+      
+      const formData = new FormData();
+      formData.append("photo", {
+        uri: url,
+        type: "image/jpeg",
+        name: `selfie-${Date.now()}.jpg`,
+      });
 
       const response = await fetch(
-        `${API_URL}/api/v1/trip-request/createTripReq`,
+        `${API_URL}/api/v1/trip/upload-photo/${currentTripRequestId}`,
         {
           method: "POST",
+          body: formData,
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user.token}`,
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            tripReqId: `REQ-${Date.now()}`,
-            user: {
-              userId: user._id,
-              userName: user.userName,
-              userImage: user.userImage || "default.jpg",
-            },
-            destination: "Placeholder",
-            destinationType: "By Walk",
-            date: new Date(),
-            time: "12:00",
-            genderPreference: mapGenderPreference(preferences.gender),
-            photoUrl: photoUrl,
-            imageVerification: !!photoUrl,
-          }),
         }
       );
 
       const result = await response.json();
       if (result.status === "success") {
-        Alert.alert("Success", "Trip created successfully!");
+        setPhotoUrl(result.data.photoUrl);
+        setPhotoUploadVisible(false);
+        setPreferencesVisible(true);
       } else {
-        throw new Error(result.message || "Failed to create trip");
+        throw new Error(result.message || "Failed to upload photo");
       }
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to create trip.");
+      Alert.alert("Error", error.message || "Failed to upload photo.");
     }
+  };
 
+  const handlePreferencesSubmit = async (preferences) => {
     try {
-      console.log("Received preferences in home screen:");
-      console.log("Start coordinates:", preferences.startCoordinates);
-      console.log(
-        "Destination coordinates:",
-        preferences.destinationCoordinates
-      );
-
       setStartMarker(preferences.startCoordinates);
       setEndMarker(preferences.destinationCoordinates);
 
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${preferences.startCoordinates.latitude},${preferences.startCoordinates.longitude}&destination=${preferences.destinationCoordinates.latitude},${preferences.destinationCoordinates.longitude}&mode=walking&key=AIzaSyDgeT00f6FE--jx1AqSBoVpxUB-5CPUX34`;
+      // Draw 500m radius circle and generate dummy users
+      setShowRadius(true);
+      const users = generateDummyUsers(preferences.startCoordinates, 500, 3 + Math.floor(Math.random() * 3)); // 3-5 users
+      setDummyUsers(users);
+      setNearbyUsers(users.length);
+
+      // Generate route coordinates using Google Directions API
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${preferences.startCoordinates.latitude},${preferences.startCoordinates.longitude}&destination=${preferences.destinationCoordinates.latitude},${preferences.destinationCoordinates.longitude}&mode=driving&key=AIzaSyDFwWtCQPY8KaiHVahvSr5jldGGFzbMDVw`;
       const response = await fetch(url);
       const data = await response.json();
-
       if (data.routes && data.routes[0]) {
         const points = data.routes[0].overview_polyline.points;
         const coords = decodePolyline(points);
-
-        const validCoords = coords.filter(
-          (coord) =>
-            coord.latitude >= -90 &&
-            coord.latitude <= 90 &&
-            coord.longitude >= -180 &&
-            coord.longitude <= 180
+        const validCoords = coords.filter(coord => 
+          coord.latitude >= -90 && coord.latitude <= 90 &&
+          coord.longitude >= -180 && coord.longitude <= 180
         );
         setRouteCoordinates(validCoords);
-
-        const users = generateDummyUsers(preferences.startCoordinates);
-        setDummyUsers(users);
-        setNearbyUsers(users.length);
-
         if (validCoords.length > 0) {
           mapRef.current?.fitToCoordinates(validCoords, {
             edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
             animated: true,
           });
         }
-
         startSearching();
       } else {
-        Alert.alert("Error", "No route found between the selected locations");
+        Alert.alert('Error', 'No route found between the selected locations');
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch route information");
+      Alert.alert('Error', 'Failed to fetch route information');
     }
   };
 
@@ -426,21 +421,20 @@ export default function HomeScreen() {
     }));
   };
 
-  const generateDummyUsers = (centerLocation) => {
+  const generateDummyUsers = (centerLocation, radiusMeters = 500, numUsers = 4) => {
     const users = [];
-    const numUsers = Math.floor(Math.random() * 3) + 2;
-    const radius = 0.0045;
-
+    const earthRadius = 6371000; // meters
     for (let i = 0; i < numUsers; i++) {
       const angle = Math.random() * 2 * Math.PI;
-      const distance = Math.random() * radius;
+      const distance = Math.random() * radiusMeters;
+      const deltaLat = (distance * Math.cos(angle)) / earthRadius * (180 / Math.PI);
+      const deltaLng = (distance * Math.sin(angle)) / (earthRadius * Math.cos(centerLocation.latitude * Math.PI / 180)) * (180 / Math.PI);
       users.push({
-        id: i,
+        id: `dummy-${i}`,
         coordinate: {
-          latitude: centerLocation.latitude + distance * Math.cos(angle),
-          longitude: centerLocation.longitude + distance * Math.sin(angle),
+          latitude: centerLocation.latitude + deltaLat,
+          longitude: centerLocation.longitude + deltaLng,
         },
-        name: `User ${i + 1}`,
       });
     }
     return users;
@@ -449,8 +443,11 @@ export default function HomeScreen() {
   const startSearching = () => {
     setIsSearching(true);
     const timer = setInterval(() => {
-      const newCount = Math.floor(Math.random() * 3) + 2;
+      const newCount = Math.floor(Math.random() * 3) + 2; // 2-4 users
       setNearbyUsers(newCount);
+      if (startMarker) {
+        setDummyUsers(generateDummyUsers(startMarker, 500, newCount));
+      }
     }, 3000);
     setSearchTimer(timer);
   };
@@ -542,6 +539,20 @@ export default function HomeScreen() {
   const handleCurrentLocation = () => {
     if (currentLocation) {
       mapRef.current?.animateToRegion(currentLocation, 1000);
+    }
+  };
+
+  const mapGenderPreference = (frontendPref) => {
+    switch (frontendPref) {
+      case "male":
+        return "male";
+      case "female":
+        return "female";
+      case "nonbinary":
+        return "nonbinary";
+      case "any":
+      default:
+        return "any";
     }
   };
 
@@ -658,7 +669,7 @@ export default function HomeScreen() {
             )}
 
             {/* 500m Radius Circle */}
-            {startMarker && (
+            {showRadius && startMarker && (
               <Circle
                 center={startMarker}
                 radius={500}
@@ -669,7 +680,10 @@ export default function HomeScreen() {
 
             {/* Dummy Users (Team's generated users) */}
             {dummyUsers.map((user) => (
-              <Marker key={user.id} coordinate={user.coordinate}>
+              <Marker
+                key={user.id}
+                coordinate={user.coordinate}
+              >
                 <View style={styles.userMarkerContainer}>
                   <MaterialCommunityIcons
                     name="account"
@@ -679,7 +693,7 @@ export default function HomeScreen() {
                 </View>
                 <Callout>
                   <View style={{ width: 140 }}>
-                    <ThemedText type="defaultSemiBold">{user.name}</ThemedText>
+                    <ThemedText type="defaultSemiBold">User {user.id}</ThemedText>
                     <ThemedText type="caption">Potential companion</ThemedText>
                   </View>
                 </Callout>

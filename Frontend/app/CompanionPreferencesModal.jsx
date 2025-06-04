@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Picker } from "@react-native-picker/picker";
 import {
   View,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { ThemedButton } from "@/components/ThemedButton";
 import PlacesAutocomplete from "@/app/PlacesAutocomplete";
+import * as Location from "expo-location";
 
 export default function CompanionPreferencesModal({
   visible,
@@ -23,9 +24,32 @@ export default function CompanionPreferencesModal({
   const [destination, setDestination] = useState("");
   const [startCoordinates, setStartCoordinates] = useState(null);
   const [destinationCoordinates, setDestinationCoordinates] = useState(null);
-  const [transport, setTransport] = useState("walk");
+  const [transport, setTransport] = useState({ mode: "walking" });
   const [genderPreference, setGenderPreference] = useState("any");
   const [isLoading, setIsLoading] = useState(false);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+
+  useEffect(() => {
+    if (useCurrentLocation) {
+      (async () => {
+        setIsLoading(true);
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permission Denied", "Location permission is required.");
+          setIsLoading(false);
+          setUseCurrentLocation(false);
+          return;
+        }
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+        setStartCoordinates({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+        setStartLocation("Current Location");
+        setIsLoading(false);
+      })();
+    } else {
+      setStartCoordinates(null);
+      setStartLocation("");
+    }
+  }, [useCurrentLocation]);
 
   const validateCoordinates = (lat, lng) => {
     // Ensure coordinates are within valid ranges and have proper precision
@@ -40,6 +64,7 @@ export default function CompanionPreferencesModal({
   };
 
   const handleStartLocationSelect = (place) => {
+    setUseCurrentLocation(false);
     setStartLocation(place.description);
     setIsLoading(true);
     fetchPlaceDetails(place.place_id, true);
@@ -64,30 +89,13 @@ export default function CompanionPreferencesModal({
         data.result.geometry.location
       ) {
         const { lat, lng } = data.result.geometry.location;
-        console.log(
-          `Raw coordinates from Google Places API - ${isStart ? "Start" : "End"}:`,
-          { lat, lng }
-        );
-
-        // Show coordinates in alert for debugging
-        Alert.alert(
-          `${isStart ? "Start" : "End"} Location Coordinates`,
-          `Raw coordinates:\nLatitude: ${lat}\nLongitude: ${lng}`
-        );
-
         const validCoords = validateCoordinates(lat, lng);
-        console.log(
-          `Validated coordinates - ${isStart ? "Start" : "End"}:`,
-          validCoords
-        );
 
         if (validCoords) {
           if (isStart) {
             setStartCoordinates(validCoords);
-            console.log("Start coordinates set to:", validCoords);
           } else {
             setDestinationCoordinates(validCoords);
-            console.log("Destination coordinates set to:", validCoords);
           }
         } else {
           Alert.alert(
@@ -96,7 +104,6 @@ export default function CompanionPreferencesModal({
           );
         }
       } else {
-        console.log("Invalid response from Google Places API:", data);
         Alert.alert(
           "Error",
           "Could not get location details. Please try again."
@@ -121,16 +128,6 @@ export default function CompanionPreferencesModal({
       );
       return;
     }
-
-    console.log("Submitting coordinates:");
-    console.log("Start:", startCoordinates);
-    console.log("Destination:", destinationCoordinates);
-
-    // Show final coordinates in alert for debugging
-    Alert.alert(
-      "Final Coordinates",
-      `Start:\nLat: ${startCoordinates.latitude}\nLng: ${startCoordinates.longitude}\n\nDestination:\nLat: ${destinationCoordinates.latitude}\nLng: ${destinationCoordinates.longitude}`
-    );
 
     // Additional validation before submission
     if (
@@ -158,6 +155,7 @@ export default function CompanionPreferencesModal({
       destinationCoordinates,
       transport,
       gender: genderPreference,
+      useCurrentLocation,
     };
     onSubmit(preferences);
     onClose();
@@ -174,14 +172,21 @@ export default function CompanionPreferencesModal({
             <Text style={styles.label}>Would you like to talk?</Text>
           </View>
 
-          <PlacesAutocomplete
-            placeholder="Starting point"
-            value={startLocation}
-            onChangeText={setStartLocation}
-            onSelect={handleStartLocationSelect}
-            style={styles.input}
-            disabled={isLoading}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Switch value={useCurrentLocation} onValueChange={setUseCurrentLocation} />
+            <Text style={styles.label}>Use Current Location</Text>
+          </View>
+
+          {!useCurrentLocation && (
+            <PlacesAutocomplete
+              placeholder="Starting point"
+              value={startLocation}
+              onChangeText={setStartLocation}
+              onSelect={handleStartLocationSelect}
+              style={styles.input}
+              disabled={isLoading}
+            />
+          )}
 
           <PlacesAutocomplete
             placeholder="Destination"
@@ -194,15 +199,26 @@ export default function CompanionPreferencesModal({
 
           <Text style={styles.label}>Choose Transport:</Text>
           <Picker
-            selectedValue={transport}
+            selectedValue={transport.mode + (transport.transit_mode ? (":" + transport.transit_mode) : "")}
             style={styles.picker}
-            onValueChange={(itemValue) => setTransport(itemValue)}
+            onValueChange={(itemValue) => {
+              // itemValue is like "walking" or "transit:bus"
+              if (itemValue.startsWith("transit:")) {
+                const submode = itemValue.split(":")[1];
+                setTransport({ mode: "transit", transit_mode: submode });
+              } else {
+                setTransport({ mode: itemValue });
+              }
+            }}
             enabled={!isLoading}
           >
-            <Picker.Item label="Walk" value="walk" />
-            <Picker.Item label="Train" value="train" />
-            <Picker.Item label="Tram" value="tram" />
-            <Picker.Item label="Bus" value="bus" />
+            <Picker.Item label="Walk" value="walking" />
+            <Picker.Item label="Drive" value="driving" />
+            <Picker.Item label="Bicycle" value="bicycling" />
+            <Picker.Item label="Bus" value="transit:bus" />
+            <Picker.Item label="Train" value="transit:train" />
+            <Picker.Item label="Subway" value="transit:subway" />
+            <Picker.Item label="Tram" value="transit:tram" />
           </Picker>
 
           <Text style={styles.label}>Preferred Gender:</Text>

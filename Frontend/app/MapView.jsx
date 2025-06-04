@@ -14,7 +14,7 @@ const MapComponent = () => {
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         }}
-        apiKey="YOUR_GOOGLE_MAPS_API_KEY" // Replace with your actual API key
+        apiKey="AIzaSyDFwWtCQPY8KaiHVahvSr5jldGGFzbMDVw" // Replace with your actual API key
       />
     </View>
   );
