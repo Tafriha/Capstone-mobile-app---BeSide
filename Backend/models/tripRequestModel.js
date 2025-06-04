@@ -46,8 +46,23 @@ const TripReqSchema = new Schema(
 
     genderPreference: {
         type: String,
-        enum: ["Male", "Female", "LGBTQ+", "Other"],
+        enum: ["any", "male", "female", "nonbinary"],
         required: [true, "Gender preference is required"],
+    },
+
+    photo: {
+        url: {
+            type: String,
+            default: "",
+        },
+        filename: {
+            type: String,
+            default: "",
+        },
+        publicId: {
+            type: String,
+            default: "",
+        },
     },
 }
 );

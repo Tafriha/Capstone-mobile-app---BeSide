@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const Trip = require("../models/tripModel");
 const TripRequest = require("../models/tripRequestModel");
+const { uploadToCloudinary, deleteFromCloudinary } = require("../utils/fileUpload");
 
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
@@ -130,4 +131,75 @@ exports.getTrip = catchAsync(async (req, res, next) => {
             trip,
         },
     });
+});
+
+exports.uploadTripPhoto = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError("No file uploaded", 400));
+  }
+
+  const { tripReqId } = req.params;
+  if (!tripReqId) {
+    return next(new AppError("Trip Request ID is required", 400));
+  }
+
+  const tripRequest = await TripRequest.findOne({ tripReqId });
+  if (!tripRequest) {
+    return next(new AppError("Trip Request not found", 404));
+  }
+
+  // Delete existing photo if any
+  if (tripRequest.photo?.publicId) {
+    await deleteFromCloudinary(tripRequest.photo.publicId);
+  }
+
+  // Upload new photo
+  const uploadResult = await uploadToCloudinary(
+    req.file,
+    "trip-photos",
+    tripRequest.user.userId
+  );
+
+  // Update trip request with new photo
+  tripRequest.photo = uploadResult;
+  await tripRequest.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Photo uploaded successfully",
+    data: {
+      photoUrl: uploadResult.url
+    }
+  });
+});
+
+exports.updateTripRequest = catchAsync(async (req, res, next) => {
+  const { tripReqId } = req.params;
+  const { destination, destinationType, date, time, genderPreference } = req.body;
+
+  if (!tripReqId) {
+    return next(new AppError("Trip Request ID is required", 400));
+  }
+
+  const tripRequest = await TripRequest.findOne({ tripReqId });
+  if (!tripRequest) {
+    return next(new AppError("Trip Request not found", 404));
+  }
+
+  // Update fields if provided
+  if (destination) tripRequest.destination = destination;
+  if (destinationType) tripRequest.destinationType = destinationType;
+  if (date) tripRequest.date = date;
+  if (time) tripRequest.time = time;
+  if (genderPreference) tripRequest.genderPreference = genderPreference;
+
+  await tripRequest.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Trip request updated successfully",
+    data: {
+      tripRequest
+    }
+  });
 });
