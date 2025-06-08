@@ -1265,8 +1265,4 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 20,
   },
-  goBackButton: {
-    flexDirection: "row",
-    zIndex: 2,
-  },
 });

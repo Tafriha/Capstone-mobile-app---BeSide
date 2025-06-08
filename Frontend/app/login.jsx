@@ -45,9 +45,7 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
-      <ThemedText type="title" style={styles.title}>
-        Login
-      </ThemedText>
+      <ThemedText type="title" style={styles.title}>Login</ThemedText>
 
       <TextInput
         style={[styles.input, { borderColor: border, color: text }]}
@@ -67,11 +65,7 @@ export default function LoginScreen() {
         placeholderTextColor={border}
       />
 
-      <ThemedText
-        type="link"
-        onPress={() => router.push("/forgotPassword")}
-        style={{ textAlign: "right", marginBottom: 20 }}
-      >
+      <ThemedText type="link" onPress={() => router.push("/forgotPassword")} style={{ textAlign: "right", marginBottom: 20 }}>
         Forgot Password?
       </ThemedText>
 
@@ -79,10 +73,7 @@ export default function LoginScreen() {
 
       <View style={styles.footerTextContainer}>
         <ThemedText type="default">
-          Don't have an account?{" "}
-          <ThemedText type="link" onPress={() => router.push("/register")}>
-            Register
-          </ThemedText>
+          Don't have an account? <ThemedText type="link" onPress={() => router.push("/register")}>Register</ThemedText>
         </ThemedText>
       </View>
     </View>

@@ -96,6 +96,14 @@ const UserSchema = new Schema(
     emailVerficationExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    otpCode: String,
+    otpExpires: Date,
+    canResetPassword: {
+      type: Boolean,
+      default: false,
+    },
+
+
     emailVerified: {
       type: Boolean,
       default: false,
