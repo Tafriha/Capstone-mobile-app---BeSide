@@ -41,6 +41,10 @@ const UserSchema = new Schema(
       required: [true, "Last name is required"],
       trim: true,
     },
+    gender: {
+      type: String,
+      enum: ["male", "female", "non-binary", "prefer-not-to-say", "other"],
+    },
     mobileNo: {
       type: String,
       required: [true, "Mobile number is required"],
@@ -92,6 +96,14 @@ const UserSchema = new Schema(
     emailVerficationExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    otpCode: String,
+    otpExpires: Date,
+    canResetPassword: {
+      type: Boolean,
+      default: false,
+    },
+
+
     emailVerified: {
       type: Boolean,
       default: false,

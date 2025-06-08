@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-<<<<<<< HEAD
-=======
   Text,
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
   TextInput,
   StyleSheet,
   Image,
@@ -14,33 +11,6 @@ import {
   Platform,
   KeyboardAvoidingView,
   TouchableOpacity,
-<<<<<<< HEAD
-  Modal,
-} from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedButton } from "@/components/ThemedButton";
-import { useThemeColor } from "@/hooks/useThemeColor";
-import { MaterialIcons } from "@expo/vector-icons";
-
-const API_BASE_URL = "http://10.0.2.2:5001/api/v1/user";
-
-export default function ProfileScreen() {
-  const [profile, setProfile] = useState(null);
-  const [email, setEmail] = useState("");
-  const [mobileNo, setMobileNo] = useState("");
-  const [photo, setPhoto] = useState(null);
-  const [address, setAddress] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const border = useThemeColor({}, "primary");
-  const background = useThemeColor({}, "background");
-  const text = useThemeColor({}, "text");
-  const accent = useThemeColor({}, "secondary");
-=======
   Dimensions,
   Modal,
   Animated,
@@ -89,54 +59,25 @@ export default function ProfileScreen() {
   const border = useThemeColor({}, "primary");
   const secondary = useThemeColor({}, "secondary");
   const text = useThemeColor({}, "text");
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
   const surface = useThemeColor({}, "surface");
 
   useEffect(() => {
     fetchProfile();
-<<<<<<< HEAD
-=======
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 800,
       useNativeDriver: true,
     }).start();
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
   }, []);
 
   const fetchProfile = async () => {
     const token = await AsyncStorage.getItem("token");
-<<<<<<< HEAD
-    if (!token) {
-      Alert.alert("Error", "No token found. Please login again.");
-      router.replace("/login");
-      return;
-    }
-
-=======
     if (!token) return router.replace("/login");
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-<<<<<<< HEAD
-      const data = await res.json();
-      if (res.ok) {
-        const user = data.data.user;
-        setProfile(user);
-        setEmail(user.email);
-        setMobileNo(user.mobileNo);
-        setPhoto(user.profilePhoto?.url);
-        setAddress(user.address || {});
-        
-      } else {
-        Alert.alert("Error", data.message || "Failed to load profile.");
-      }
-    } catch {
-      Alert.alert("Error", "Something went wrong.");
-=======
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`HTTP error ${res.status}: ${errorText}`);
@@ -173,30 +114,19 @@ export default function ProfileScreen() {
     } catch (e) {
       console.log("Fetch profile error:", e.message);
       Alert.alert("Error", "Failed to fetch profile: " + e.message);
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
     } finally {
       setLoading(false);
     }
   };
 
   const pickImage = async () => {
-<<<<<<< HEAD
-    const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
-    const galleryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-=======
     console.log("pickImage triggered");
     const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
     const galleryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
     if (cameraPerm.status !== "granted" || galleryPerm.status !== "granted") {
       Alert.alert("Permission Required", "Camera and gallery access required.");
       return;
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
     Alert.alert("Select Image Source", "Choose an option", [
       {
         text: "Camera",
@@ -236,10 +166,6 @@ export default function ProfileScreen() {
         name: "profile.jpg",
         type: "image/jpeg",
       });
-<<<<<<< HEAD
-
-=======
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
       try {
         const response = await fetch(`${API_BASE_URL}/profile-photo`, {
           method: "POST",
@@ -249,10 +175,6 @@ export default function ProfileScreen() {
           },
           body: formData,
         });
-<<<<<<< HEAD
-
-=======
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
         const data = await response.json();
         if (response.ok) {
           setPhoto(data.data.user.profilePhoto.url);
@@ -260,33 +182,18 @@ export default function ProfileScreen() {
         } else {
           Alert.alert("Error", data.message || "Upload failed.");
         }
-<<<<<<< HEAD
-      } catch {
-        Alert.alert("Error", "Upload failed.");
-=======
       } catch (e) {
         Alert.alert("Error", "Upload failed: " + e.message);
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
       }
     }
   };
 
   const handleSave = async () => {
     if (!email || !mobileNo) {
-<<<<<<< HEAD
-      Alert.alert(
-        "Validation Error",
-        "Email and Mobile Number cannot be empty."
-      );
-      return;
-    }
-
-=======
       Alert.alert("Validation Error", "Email and Mobile Number are required.");
       return;
     }
     setSaving(true);
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
     const token = await AsyncStorage.getItem("token");
     try {
       const res = await fetch(`${API_BASE_URL}/profile`, {
@@ -295,27 +202,6 @@ export default function ProfileScreen() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-<<<<<<< HEAD
-        body: JSON.stringify({ email, mobileNo, address }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        Alert.alert("Success", "Profile updated!");
-        fetchProfile();
-        console.log("Loaded Custom User ID:", user.userId);
-      } else {
-        Alert.alert("Error", data.message || "Update failed.");
-      }
-    } catch {
-      Alert.alert("Error", "Update failed.");
-    }
-  };
-
-  if (loading || !profile) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={accent} />
-=======
         body: JSON.stringify({
           firstName,
           lastName,
@@ -502,184 +388,11 @@ export default function ProfileScreen() {
             <Text style={styles.buttonText}>Retry</Text>
           </LinearGradient>
         </TouchableOpacity>
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
       </View>
     );
   }
 
   return (
-<<<<<<< HEAD
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "android" ? "padding" : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.card, { backgroundColor: surface }]}>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
-            <Image
-              source={
-                photo && photo.startsWith("http")
-                  ? { uri: photo }
-                  : require("@/assets/images/placeholder2.jpg")
-              }
-              style={styles.avatar}
-            />
-          </TouchableOpacity>
-          <ThemedText type="link" style={styles.uploadText} onPress={pickImage}>
-            Change Photo
-          </ThemedText>
-
-          {[
-            { label: "Username", value: profile.userName, editable: false },
-            { label: "Email", value: email, onChangeText: setEmail },
-            {
-              label: "Mobile Number",
-              value: mobileNo,
-              onChangeText: setMobileNo,
-            },
-            {
-              label: "User ID",
-              value: profile.userId || profile._id,
-              editable: false,
-            },
-
-            {
-              label: "Registered On",
-              value: new Date(profile.createdDate).toLocaleDateString(),
-              editable: false,
-            },
-          ].map((field, idx) => (
-            <View key={idx}>
-              <ThemedText type="defaultSemiBold" style={styles.label}>
-                {field.label}
-              </ThemedText>
-              <TextInput
-                style={[styles.input, { borderColor: border, color: text }]}
-                value={field.value}
-                onChangeText={field.onChangeText}
-                editable={field.editable !== false}
-              />
-            </View>
-          ))}
-
-          <View style={styles.statusContainer}>
-            {[
-              {
-                label: profile.isVerified ? "Verified" : "Unverified",
-                active: profile.isVerified,
-              },
-              {
-                label: profile.availability ? "Available" : "Unavailable",
-                active: profile.availability,
-              },
-            ].map((item, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.statusChip,
-                  { backgroundColor: item.active ? "#D1FADF" : "#FEE4E2" },
-                ]}
-              >
-                <MaterialIcons
-                  name={item.active ? "check-circle" : "cancel"}
-                  size={16}
-                  color={item.active ? "#027A48" : "#B42318"}
-                  style={styles.statusIcon}
-                />
-                <ThemedText
-                  style={[
-                    styles.statusText,
-                    { color: item.active ? "#027A48" : "#B42318" },
-                  ]}
-                >
-                  {item.label}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.addressGroup}>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>Country</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.country || ""}
-                onChangeText={(text) =>
-                  setAddress({ ...address, country: text })
-                }
-              />
-            </View>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>State</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.state || ""}
-                onChangeText={(text) => setAddress({ ...address, state: text })}
-              />
-            </View>
-          </View>
-
-          <View style={styles.addressGroup}>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>City</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.city || ""}
-                onChangeText={(text) => setAddress({ ...address, city: text })}
-              />
-            </View>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>Postal Code</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.postalCode || ""}
-                onChangeText={(text) =>
-                  setAddress({ ...address, postalCode: text })
-                }
-              />
-            </View>
-          </View>
-
-          <View style={styles.addressGroup}>
-            <View style={styles.addressBox}>
-              <ThemedText style={styles.label}>Country Code</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={address.countryCode || ""}
-                onChangeText={(text) =>
-                  setAddress({ ...address, countryCode: text })
-                }
-              />
-            </View>
-          </View>
-
-          <ThemedButton
-            title="Save Changes"
-            onPress={handleSave}
-            style={styles.saveBtn}
-          />
-        </View>
-
-        <Modal
-          visible={modalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalBackground}
-            onPress={() => setModalVisible(false)}
-          >
-            <Image
-              source={{ uri: photo }}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
-=======
     <LinearGradient
       colors={["#FFF0EB", "#FAD4C0", "#EBB7AD"]}
       start={{ x: 0.5, y: 0 }}
@@ -1084,91 +797,10 @@ export default function ProfileScreen() {
         </Modal>
       </KeyboardAvoidingView>
     </LinearGradient>
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
   );
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  scrollContent: { flexGrow: 1, padding: 16 },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  card: {
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignSelf: "center",
-    marginBottom: 10,
-  },
-  fullImage: {
-    width: "100%",
-    height: "100%",
-  },
-  modalBackground: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  uploadText: {
-    textAlign: "center",
-    fontFamily: "SpaceMono",
-    marginBottom: 20,
-  },
-  label: {
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-    color: "#000",
-  },
-  saveBtn: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  addressGroup: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  addressBox: {
-    flex: 1,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  statusChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignSelf: "flex-start",
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  statusIcon: {
-    marginRight: 6,
-=======
   container: {
     flex: 1,
   },
@@ -1377,6 +1009,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     justifyContent: "space-between",
     marginTop: 20,
->>>>>>> 59d1139cb6dceb46b90ddd89debfd810c1b7abcf
   },
 });

@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
+    "deepLinks": ["myapp://"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

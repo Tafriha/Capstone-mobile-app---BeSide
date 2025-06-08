@@ -19,31 +19,31 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    console.log("Sending password reset request for:", email);
     setLoading(true);
 
     try {
-      const response = await fetch("http://10.0.2.2:5000/api/v1/auth/forgotPassword", {
+      const response = await fetch("http://10.0.2.2:5000/api/v1/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
-      console.log("Response status:", response.status);
-      console.log("Response data:", data);
 
       if (response.ok) {
-        Alert.alert("Success", "A reset link has been sent to your email.");
-        router.replace("/login");
+        Alert.alert("OTP Sent", "A verification code has been sent to your email.");
+        router.push({
+          pathname: "/verifyOTP",
+          params: { email },
+        });
       } else {
         Alert.alert("Error", data.message || "Something went wrong.");
       }
     } catch (error) {
       console.error("Forgot Password Error:", error);
-      Alert.alert("Error", "Unable to send reset email. Please try again.");
+      Alert.alert("Error", "Unable to send OTP. Please try again.");
     } finally {
-      setLoading(false); // 🔒 Always reset loading
+      setLoading(false);
     }
   };
 
@@ -64,7 +64,7 @@ export default function ForgotPasswordScreen() {
       />
 
       <ThemedButton
-        title="Send Reset Link"
+        title={loading ? "Sending..." : "Send OTP"}
         onPress={handleReset}
         disabled={loading}
       />

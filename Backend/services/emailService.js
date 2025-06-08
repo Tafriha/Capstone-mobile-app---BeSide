@@ -84,5 +84,15 @@ class EmailService {
       html,
     });
   }
+  async sendGenericEmail(email, subject, message) {
+  const html = `<p>${message}</p>`;
+  return this.sendEmail({
+    email,
+    subject,
+    text: message,
+    html,
+  });
+}
+
 }
 module.exports = new EmailService();
