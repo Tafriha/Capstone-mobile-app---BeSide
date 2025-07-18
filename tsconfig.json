@@ -1,5 +1,0 @@
-{
-  "compilerOptions": {},
-  "extends": "./node_modules/expo/tsconfig.base"
-
-}
