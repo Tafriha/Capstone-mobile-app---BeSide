@@ -9,6 +9,9 @@ import {
   Alert,
   Image,
   Animated,
+  Switch,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -36,129 +39,49 @@ const { width } = Dimensions.get("window");
 const placeholderImage = require("../assets/images/placeholder2.jpg");
 
 const customMapStyle = [
-  {
-    featureType: "all",
-    elementType: "geometry",
-    stylers: [{ visibility: "on" }],
-  },
-  {
-    featureType: "all",
-    elementType: "labels.text.fill",
-  },
-  {
-    featureType: "all",
-    elementType: "labels.text.stroke",
-    stylers: [{ lightness: "-37" }],
-  },
-  {
-    featureType: "all",
-    elementType: "labels.icon",
-    stylers: [{ visibility: "on" }],
-  },
-  {
-    featureType: "administrative",
-    elementType: "geometry.fill",
-    stylers: [{ color: "#fefefe" }, { lightness: "20" }],
-  },
-  {
-    featureType: "administrative",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#fefefe" }, { lightness: "17" }, { weight: "1.2" }],
-  },
-  {
-    featureType: "landscape",
-    elementType: "geometry",
-    stylers: [{ color: "#f5f5f5" }, { lightness: "20" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "geometry",
-    stylers: [{ color: "#f5f5f5" }, { lightness: "21" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#dedede" }, { lightness: "21" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry.fill",
-    stylers: [{ color: "#ffffff" }, { lightness: "17" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#ffffff" }, { lightness: "29" }, { weight: "0.2" }],
-  },
-  {
-    featureType: "road.arterial",
-    elementType: "geometry",
-    stylers: [{ color: "#ffffff" }, { lightness: "18" }],
-  },
-  {
-    featureType: "road.local",
-    elementType: "geometry",
-    stylers: [{ color: "#ffffff" }, { lightness: "16" }],
-  },
-  {
-    featureType: "transit",
-    elementType: "geometry",
-    stylers: [{ color: "#f2f2f2" }, { lightness: "19" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#e9e9e9" }, { lightness: "17" }],
-  },
+  { featureType: "all", elementType: "geometry", stylers: [{ visibility: "on" }] },
+  { featureType: "all", elementType: "labels.text.fill" },
+  { featureType: "all", elementType: "labels.text.stroke", stylers: [{ lightness: "-37" }] },
+  { featureType: "all", elementType: "labels.icon", stylers: [{ visibility: "on" }] },
+  { featureType: "administrative", elementType: "geometry.fill", stylers: [{ color: "#fefefe" }, { lightness: "20" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#fefefe" }, { lightness: "17" }, { weight: "1.2" }] },
+  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#f5f5f5" }, { lightness: "20" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#f5f5f5" }, { lightness: "21" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dedede" }, { lightness: "21" }] },
+  { featureType: "road.highway", elementType: "geometry.fill", stylers: [{ color: "#ffffff" }, { lightness: "17" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#ffffff" }, { lightness: "29" }, { weight: "0.2" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#ffffff" }, { lightness: "18" }] },
+  { featureType: "road.local", elementType: "geometry", stylers: [{ color: "#ffffff" }, { lightness: "16" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#f2f2f2" }, { lightness: "19" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#e9e9e9" }, { lightness: "17" }] },
 ];
 
 // Hardcoded users for testing (from your code)
 const hardcodedUsers = [
-  {
-    userName: "AliceSmith",
-    latitude: -33.8688,
-    longitude: 151.2093,
-    userImage: placeholderImage,
-    genderPreference: "Woman",
-  },
-  {
-    userName: "BobJohnson",
-    latitude: -33.865,
-    longitude: 151.205,
-    userImage: placeholderImage,
-    genderPreference: "Man",
-  },
-  {
-    userName: "CharlieNonbinary",
-    latitude: -33.872,
-    longitude: 151.215,
-    userImage: placeholderImage,
-    genderPreference: "LGBTQ+",
-  },
-  {
-    userName: "DanaOther",
-    latitude: -33.86,
-    longitude: 151.2,
-    userImage: placeholderImage,
-    genderPreference: "Other",
-  },
+  { userName: "AliceSmith", latitude: -33.8688, longitude: 151.2093, userImage: placeholderImage, genderPreference: "Woman" },
+  { userName: "BobJohnson", latitude: -33.865, longitude: 151.205, userImage: placeholderImage, genderPreference: "Man" },
+  { userName: "CharlieNonbinary", latitude: -33.872, longitude: 151.215, userImage: placeholderImage, genderPreference: "LGBTQ+" },
+  { userName: "DanaOther", latitude: -33.86, longitude: 151.2, userImage: placeholderImage, genderPreference: "Other" },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+
+  // Menu modal
   const [menuVisible, setMenuVisible] = useState(false);
+
+  // Availability (now shown and controlled inside the hamburger menu)
+  const [availability, setAvailability] = useState(true);
+  const [savingAvailability, setSavingAvailability] = useState(false);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [photoUploadVisible, setPhotoUploadVisible] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
   const [preferencesVisible, setPreferencesVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [consent, setConsent] = useState({
-    noTouch: false,
-    respectful: false,
-    safety: false,
-  });
+  const [consent, setConsent] = useState({ noTouch: false, respectful: false, safety: false });
   const [photoUrl, setPhotoUrl] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
@@ -179,7 +102,9 @@ export default function HomeScreen() {
       const load = async () => {
         const stored = await AsyncStorage.getItem("user");
         if (stored) {
-          setUser(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          setUser(parsed);
+          if (typeof parsed?.availability === "boolean") setAvailability(parsed.availability);
         } else {
           router.replace("/login");
         }
@@ -187,16 +112,8 @@ export default function HomeScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
           console.log("Location permission denied. Using fallback location.");
-          Alert.alert(
-            "Location Permission Denied",
-            "Please enable location services in your device settings."
-          );
-          setCurrentLocation({
-            latitude: -33.8688,
-            longitude: 151.2093,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          });
+          Alert.alert("Location Permission Denied", "Please enable location services in your device settings.");
+          setCurrentLocation({ latitude: -33.8688, longitude: 151.2093, latitudeDelta: 0.01, longitudeDelta: 0.01 });
           return;
         }
 
@@ -216,11 +133,7 @@ export default function HomeScreen() {
           });
 
           locationSubscription = await Location.watchPositionAsync(
-            {
-              accuracy: Location.Accuracy.High,
-              timeInterval: 5000,
-              distanceInterval: 10,
-            },
+            { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
             (newLocation) => {
               console.log("Location updated:", newLocation.coords);
               setCurrentLocation({
@@ -234,21 +147,14 @@ export default function HomeScreen() {
         } catch (error) {
           console.error("Error fetching location:", error.message);
           Alert.alert("Location Error", "Using fallback location.");
-          setCurrentLocation({
-            latitude: -33.8688,
-            longitude: 151.2093,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          });
+          setCurrentLocation({ latitude: -33.8688, longitude: 151.2093, latitudeDelta: 0.01, longitudeDelta: 0.01 });
         }
       };
 
       load();
 
       return () => {
-        if (locationSubscription) {
-          locationSubscription.remove();
-        }
+        if (locationSubscription) locationSubscription.remove();
       };
     }, [])
   );
@@ -257,16 +163,8 @@ export default function HomeScreen() {
     if (isSearching) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(loadingAnimation, {
-            toValue: 1,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(loadingAnimation, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
+          Animated.timing(loadingAnimation, { toValue: 1, duration: 2000, useNativeDriver: true }),
+          Animated.timing(loadingAnimation, { toValue: 0, duration: 0, useNativeDriver: true }),
         ])
       ).start();
     } else {
@@ -288,26 +186,18 @@ export default function HomeScreen() {
     }
     const parsed = JSON.parse(storedUser);
     if (parsed.isVerified) {
-      // Create trip request first
       try {
         const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
         const response = await fetch(`${API_URL}/api/v1/trip/createTripReq`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            user: {
-              userId: parsed._id,
-              userName: parsed.userName,
-              userImage: parsed.userImage || "default.jpg",
-            },
-            destination: "Placeholder", // Will be updated later
-            destinationType: "By Walk", // Will be updated later
+            user: { userId: parsed._id, userName: parsed.userName, userImage: parsed.userImage || "default.jpg" },
+            destination: "Placeholder",
+            destinationType: "By Walk",
             date: new Date(),
-            time: "12:00", // Will be updated later
-            genderPreference: "any", // Will be updated later
+            time: "12:00",
+            genderPreference: "any",
           }),
         });
 
@@ -344,24 +234,15 @@ export default function HomeScreen() {
 
       const user = JSON.parse(storedUser);
       const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
-      
-      const formData = new FormData();
-      formData.append("photo", {
-        uri: url,
-        type: "image/jpeg",
-        name: `selfie-${Date.now()}.jpg`,
-      });
 
-      const response = await fetch(
-        `${API_URL}/api/v1/trip/upload-photo/${currentTripRequestId}`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const formData = new FormData();
+      formData.append("photo", { uri: url, type: "image/jpeg", name: `selfie-${Date.now()}.jpg` });
+
+      const response = await fetch(`${API_URL}/api/v1/trip/upload-photo/${currentTripRequestId}`, {
+        method: "POST",
+        body: formData,
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const result = await response.json();
       if (result.status === "success") {
@@ -394,9 +275,12 @@ export default function HomeScreen() {
       if (data.routes && data.routes[0]) {
         const points = data.routes[0].overview_polyline.points;
         const coords = decodePolyline(points);
-        const validCoords = coords.filter(coord => 
-          coord.latitude >= -90 && coord.latitude <= 90 &&
-          coord.longitude >= -180 && coord.longitude <= 180
+        const validCoords = coords.filter(
+          (coord) =>
+            coord.latitude >= -90 &&
+            coord.latitude <= 90 &&
+            coord.longitude >= -180 &&
+            coord.longitude <= 180
         );
         setRouteCoordinates(validCoords);
         if (validCoords.length > 0) {
@@ -407,18 +291,15 @@ export default function HomeScreen() {
         }
         startSearching();
       } else {
-        Alert.alert('Error', 'No route found between the selected locations');
+        Alert.alert("Error", "No route found between the selected locations");
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch route information');
+      Alert.alert("Error", "Failed to fetch route information");
     }
   };
 
   const decodePolyline = (encoded) => {
-    return polyline.decode(encoded).map(([latitude, longitude]) => ({
-      latitude,
-      longitude,
-    }));
+    return polyline.decode(encoded).map(([latitude, longitude]) => ({ latitude, longitude }));
   };
 
   const generateDummyUsers = (centerLocation, radiusMeters = 500, numUsers = 4) => {
@@ -427,14 +308,13 @@ export default function HomeScreen() {
     for (let i = 0; i < numUsers; i++) {
       const angle = Math.random() * 2 * Math.PI;
       const distance = Math.random() * radiusMeters;
-      const deltaLat = (distance * Math.cos(angle)) / earthRadius * (180 / Math.PI);
-      const deltaLng = (distance * Math.sin(angle)) / (earthRadius * Math.cos(centerLocation.latitude * Math.PI / 180)) * (180 / Math.PI);
+      const deltaLat = ((distance * Math.cos(angle)) / earthRadius) * (180 / Math.PI);
+      const deltaLng =
+        ((distance * Math.sin(angle)) / (earthRadius * Math.cos((centerLocation.latitude * Math.PI) / 180))) *
+        (180 / Math.PI);
       users.push({
         id: `dummy-${i}`,
-        coordinate: {
-          latitude: centerLocation.latitude + deltaLat,
-          longitude: centerLocation.longitude + deltaLng,
-        },
+        coordinate: { latitude: centerLocation.latitude + deltaLat, longitude: centerLocation.longitude + deltaLng },
       });
     }
     return users;
@@ -445,17 +325,13 @@ export default function HomeScreen() {
     const timer = setInterval(() => {
       const newCount = Math.floor(Math.random() * 3) + 2; // 2-4 users
       setNearbyUsers(newCount);
-      if (startMarker) {
-        setDummyUsers(generateDummyUsers(startMarker, 500, newCount));
-      }
+      if (startMarker) setDummyUsers(generateDummyUsers(startMarker, 500, newCount));
     }, 3000);
     setSearchTimer(timer);
   };
 
   const cancelSearch = () => {
-    if (searchTimer) {
-      clearInterval(searchTimer);
-    }
+    if (searchTimer) clearInterval(searchTimer);
     setIsSearching(false);
     setNearbyUsers(0);
     setDummyUsers([]);
@@ -470,10 +346,7 @@ export default function HomeScreen() {
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
@@ -499,30 +372,19 @@ export default function HomeScreen() {
       }
 
       const user = JSON.parse(storedUser);
-      const API_URL =
-        Platform.OS === "android"
-          ? "http://10.0.2.2:5000"
-          : "http://localhost:5000";
+      const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
 
-      const response = await fetch(
-        `${API_URL}/api/v1/trip-request/sendRequest`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({
-            senderId: user._id,
-            receiverId: selectedUser.userName,
-            consent: consent,
-            preferences: {
-              gender: user.genderPreference || "any",
-            },
-            photoUrl: photoUrl,
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/trip-request/sendRequest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({
+          senderId: user._id,
+          receiverId: selectedUser.userName,
+          consent: consent,
+          preferences: { gender: user.genderPreference || "any" },
+          photoUrl: photoUrl,
+        }),
+      });
 
       const result = await response.json();
       if (result.status === "success") {
@@ -537,56 +399,51 @@ export default function HomeScreen() {
   };
 
   const handleCurrentLocation = () => {
-    if (currentLocation) {
-      mapRef.current?.animateToRegion(currentLocation, 1000);
-    }
+    if (currentLocation) mapRef.current?.animateToRegion(currentLocation, 1000);
   };
 
-  const mapGenderPreference = (frontendPref) => {
-    switch (frontendPref) {
-      case "male":
-        return "male";
-      case "female":
-        return "female";
-      case "nonbinary":
-        return "nonbinary";
-      case "any":
-      default:
-        return "any";
+  // Availability PATCH + cache update (called from switch in menu)
+  const onToggleAvailability = async (value) => {
+    const prev = availability;
+    setAvailability(value); // optimistic
+    setSavingAvailability(true);
+    try {
+      const [token, rawUser] = await Promise.all([AsyncStorage.getItem("token"), AsyncStorage.getItem("user")]);
+      const parsedUser = rawUser ? JSON.parse(rawUser) : null;
+      const bearer = token || parsedUser?.token;
+      if (!bearer) throw new Error("Not authenticated");
+
+      const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
+      const res = await fetch(`${API_URL}/api/v1/user/availability`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearer}` },
+        body: JSON.stringify({ availability: value }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data?.status !== "success") throw new Error(data?.message || `HTTP ${res.status}`);
+
+      if (data?.data?.user) {
+        await AsyncStorage.setItem("user", JSON.stringify(data.data.user));
+        setUser(data.data.user);
+      }
+    } catch (err) {
+      setAvailability(prev); // revert
+      Alert.alert("Couldn’t update status", err?.message ?? "Please try again.");
+    } finally {
+      setSavingAvailability(false);
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Top Bar */}
       <View style={styles.topBar}>
         <ThemedText type="title">BeSide</ThemedText>
-        <TouchableOpacity onPress={() => setMenuVisible(true)}>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} accessibilityRole="button" accessibilityLabel="Open menu">
           <ThemedText type="defaultSemiBold">☰</ThemedText>
         </TouchableOpacity>
       </View>
-
-      <Modal transparent animationType="fade" visible={menuVisible}>
-        <TouchableOpacity
-          style={styles.menuOverlay}
-          onPress={() => setMenuVisible(false)}
-        >
-          <View style={styles.menuBox}>
-            <TouchableOpacity onPress={() => router.push("/profile")}>
-              <ThemedText type="defaultSemiBold" style={styles.menuItem}>
-                Account
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleLogout}>
-              <ThemedText
-                type="defaultSemiBold"
-                style={[styles.menuItem, { color: Colors.light.danger }]}
-              >
-                Logout
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* Map */}
       <View style={styles.mapContainer}>
@@ -627,11 +484,7 @@ export default function HomeScreen() {
             {startMarker && (
               <Marker coordinate={startMarker}>
                 <View style={styles.markerContainer}>
-                  <MaterialCommunityIcons
-                    name="map-marker"
-                    size={30}
-                    color="#4CAF50"
-                  />
+                  <MaterialCommunityIcons name="map-marker" size={30} color="#4CAF50" />
                 </View>
                 <Callout>
                   <View style={{ width: 140 }}>
@@ -645,11 +498,7 @@ export default function HomeScreen() {
             {endMarker && (
               <Marker coordinate={endMarker}>
                 <View style={styles.markerContainer}>
-                  <MaterialCommunityIcons
-                    name="map-marker"
-                    size={30}
-                    color="#F44336"
-                  />
+                  <MaterialCommunityIcons name="map-marker" size={30} color="#F44336" />
                 </View>
                 <Callout>
                   <View style={{ width: 140 }}>
@@ -660,36 +509,18 @@ export default function HomeScreen() {
             )}
 
             {/* Route Line */}
-            {routeCoordinates.length > 0 && (
-              <Polyline
-                coordinates={routeCoordinates}
-                strokeWidth={4}
-                strokeColor="#2196F3"
-              />
-            )}
+            {routeCoordinates.length > 0 && <Polyline coordinates={routeCoordinates} strokeWidth={4} strokeColor="#2196F3" />}
 
             {/* 500m Radius Circle */}
             {showRadius && startMarker && (
-              <Circle
-                center={startMarker}
-                radius={500}
-                strokeColor="rgba(158, 158, 255, 0.5)"
-                fillColor="rgba(158, 158, 255, 0.2)"
-              />
+              <Circle center={startMarker} radius={500} strokeColor="rgba(158, 158, 255, 0.5)" fillColor="rgba(158, 158, 255, 0.2)" />
             )}
 
-            {/* Dummy Users (Team's generated users) */}
+            {/* Dummy Users */}
             {dummyUsers.map((user) => (
-              <Marker
-                key={user.id}
-                coordinate={user.coordinate}
-              >
+              <Marker key={user.id} coordinate={user.coordinate}>
                 <View style={styles.userMarkerContainer}>
-                  <MaterialCommunityIcons
-                    name="account"
-                    size={24}
-                    color="#FF5722"
-                  />
+                  <MaterialCommunityIcons name="account" size={24} color="#FF5722" />
                 </View>
                 <Callout>
                   <View style={{ width: 140 }}>
@@ -700,7 +531,7 @@ export default function HomeScreen() {
               </Marker>
             ))}
 
-            {/* Hardcoded Users (Your existing users) */}
+            {/* Hardcoded Users */}
             {hardcodedUsers.map((user, index) => {
               const distance = calculateDistance(
                 currentLocation.latitude,
@@ -711,21 +542,14 @@ export default function HomeScreen() {
               return (
                 <Marker
                   key={index}
-                  coordinate={{
-                    latitude: user.latitude,
-                    longitude: user.longitude,
-                  }}
+                  coordinate={{ latitude: user.latitude, longitude: user.longitude }}
                   title={user.userName}
                   onPress={() => setSelectedUser({ ...user, distance })}
                 >
                   <Callout>
                     <View style={{ width: 140 }}>
-                      <ThemedText type="defaultSemiBold">
-                        {user.userName}
-                      </ThemedText>
-                      <ThemedText type="caption">
-                        Gender: {user.genderPreference}
-                      </ThemedText>
+                      <ThemedText type="defaultSemiBold">{user.userName}</ThemedText>
+                      <ThemedText type="caption">Gender: {user.genderPreference}</ThemedText>
                     </View>
                   </Callout>
                 </Marker>
@@ -737,21 +561,14 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Current Location Button (Team's addition) */}
-      <TouchableOpacity
-        style={styles.currentLocationButton}
-        onPress={handleCurrentLocation}
-      >
+      {/* Current Location Button */}
+      <TouchableOpacity style={styles.currentLocationButton} onPress={handleCurrentLocation}>
         <Ionicons name="locate" size={24} color={Colors.light.primary} />
       </TouchableOpacity>
 
-      {/* Find Companion Button or Cancel Button (Team's searching UI) */}
+      {/* Find Companion / Cancel */}
       {!isSearching ? (
-        <ThemedButton
-          title="Find a Companion"
-          onPress={handleFindCompanion}
-          style={styles.actionButton}
-        />
+        <ThemedButton title="Find a Companion" onPress={handleFindCompanion} style={styles.actionButton} />
       ) : (
         <View style={styles.searchingContainer}>
           <View style={styles.loadingBarContainer}>
@@ -772,72 +589,40 @@ export default function HomeScreen() {
             />
           </View>
           <View style={styles.searchingInfo}>
-            <ThemedText type="defaultSemiBold">
-              Searching for companions...
-            </ThemedText>
+            <ThemedText type="defaultSemiBold">Searching for companions...</ThemedText>
             <ThemedText type="caption">
-              {nearbyUsers > 0
-                ? `${nearbyUsers} people found in your area`
-                : "Looking for people nearby..."}
+              {nearbyUsers > 0 ? `${nearbyUsers} people found in your area` : "Looking for people nearby..."}
             </ThemedText>
           </View>
-          <ThemedButton
-            title="Cancel Search"
-            onPress={cancelSearch}
-            style={styles.cancelButton}
-          />
+          <ThemedButton title="Cancel Search" onPress={cancelSearch} style={styles.cancelButton} />
         </View>
       )}
 
-      {/* User Card Modal (Your existing feature) */}
-      <Modal
-        transparent
-        animationType="slide"
-        visible={!!selectedUser}
-        onRequestClose={() => setSelectedUser(null)}
-      >
+      {/* User Card Modal */}
+      <Modal transparent animationType="slide" visible={!!selectedUser} onRequestClose={() => setSelectedUser(null)}>
         <View style={styles.popupOverlay}>
           <View style={styles.userCard}>
-            {selectedUser?.userImage && (
-              <Image
-                source={selectedUser.userImage}
-                style={styles.userImage}
-                resizeMode="cover"
-              />
-            )}
+            {selectedUser?.userImage && <Image source={selectedUser.userImage} style={styles.userImage} resizeMode="cover" />}
             <ThemedText type="subtitle">{selectedUser?.userName}</ThemedText>
-            <ThemedText type="caption">
-              Distance: {(selectedUser?.distance || 0).toFixed(2)} km
-            </ThemedText>
-            <ThemedText type="caption">
-              Gender Preference: {selectedUser?.genderPreference}
-            </ThemedText>
+            <ThemedText type="caption">Distance: {(selectedUser?.distance || 0).toFixed(2)} km</ThemedText>
+            <ThemedText type="caption">Gender Preference: {selectedUser?.genderPreference}</ThemedText>
             <ThemedButton
               title="View Profile"
-              onPress={() =>
-                router.push(`/profile?userName=${selectedUser?.userName}`)
-              }
+              onPress={() => router.push(`/profile?userName=${selectedUser?.userName}`)}
               style={styles.cardButton}
             />
-            <ThemedButton
-              title="Send Request"
-              onPress={() => handleSendRequest(selectedUser)}
-              style={styles.cardButton}
-            />
+            <ThemedButton title="Send Request" onPress={() => handleSendRequest(selectedUser)} style={styles.cardButton} />
             <ThemedButton
               title="Close"
               onPress={() => setSelectedUser(null)}
-              style={[
-                styles.cardButton,
-                { backgroundColor: Colors.light.danger },
-              ]}
+              style={[styles.cardButton, { backgroundColor: Colors.light.danger }]}
             />
           </View>
         </View>
       </Modal>
 
       {/* Not Verified Popup */}
-      <Modal transparent animationType="slide" visible={modalVisible}>
+      <Modal transparent animationType="slide" visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.popupOverlay}>
           <View style={styles.popupBox}>
             <ThemedText type="subtitle">Oops!</ThemedText>
@@ -855,7 +640,86 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Consent Form Modal */}
+      {/* HAMBURGER MENU (with Availability inside) */}
+      <Modal transparent animationType="fade" visible={menuVisible} onRequestClose={() => setMenuVisible(false)}>
+        {/* Backdrop clicks close the menu */}
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)} />
+
+        {/* Menu panel (touches do NOT close automatically) */}
+        <View style={styles.menuBox}>
+          {/* Close button row */}
+          <View style={styles.menuHeader}>
+            <ThemedText type="defaultSemiBold">Menu</ThemedText>
+            <TouchableOpacity onPress={() => setMenuVisible(false)} style={styles.closeBtn}>
+              <ThemedText type="defaultSemiBold">✕</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Availability inside menu */}
+          <View style={styles.availabilityRow}>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="defaultSemiBold">Availability</ThemedText>
+              <ThemedText type="caption">
+                {availability ? "You’re visible for matching." : "You’re hidden from matching."}
+              </ThemedText>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Switch value={availability} onValueChange={onToggleAvailability} disabled={savingAvailability} />
+              {savingAvailability ? <ActivityIndicator /> : null}
+            </View>
+          </View>
+
+          {/* Links */}
+          <TouchableOpacity
+            onPress={() => {
+              setMenuVisible(false);
+              router.push("/profile");
+            }}
+          >
+            <ThemedText type="defaultSemiBold" style={styles.menuItem}>
+              Account
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setMenuVisible(false);
+              router.push("/settings");
+            }}
+          >
+            <ThemedText type="defaultSemiBold" style={styles.menuItem}>
+              Settings
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setMenuVisible(false);
+              router.push("/help");
+            }}
+          >
+            <ThemedText type="defaultSemiBold" style={styles.menuItem}>
+              Help
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setMenuVisible(false);
+              handleLogout();
+            }}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={[styles.menuItem, { color: Colors.light.danger }]}
+            >
+              Logout
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Consent / Prefs / Photo */}
       <ConsentModal
         visible={consentVisible}
         onClose={() => setConsentVisible(false)}
@@ -867,28 +731,15 @@ export default function HomeScreen() {
         }}
       />
 
-      {/* Preferences Modal */}
-      <CompanionPreferencesModal
-        visible={preferencesVisible}
-        onClose={() => setPreferencesVisible(false)}
-        onSubmit={handlePreferencesSubmit}
-      />
+      <CompanionPreferencesModal visible={preferencesVisible} onClose={() => setPreferencesVisible(false)} onSubmit={handlePreferencesSubmit} />
 
-      {/* Photo Upload Modal (Your existing feature) */}
-      <PhotoUploadModal
-        visible={photoUploadVisible}
-        onClose={() => setPhotoUploadVisible(false)}
-        onSubmit={handlePhotoSubmit}
-      />
+      <PhotoUploadModal visible={photoUploadVisible} onClose={() => setPhotoUploadVisible(false)} onSubmit={handlePhotoSubmit} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.light.background },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -899,13 +750,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.1)",
   },
-  mapContainer: {
-    flex: 1,
-  },
-  map: {
-    width: "100%",
-    height: "100%",
-  },
+  mapContainer: { flex: 1 },
+  map: { width: "100%", height: "100%" },
+
   currentLocationButton: {
     position: "absolute",
     bottom: 100,
@@ -922,34 +769,54 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  actionButton: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    width: "auto",
-  },
+  actionButton: { position: "absolute", bottom: 20, left: 20, right: 20, width: "auto" },
+
+  // --- Menu Modal
   menuOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    padding: 20,
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   menuBox: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 240,
     backgroundColor: Colors.light.surface,
-    borderRadius: 10,
     padding: 12,
-    width: 180,
+    borderLeftWidth: 1,
+    borderLeftColor: "rgba(0,0,0,0.1)",
+    elevation: 8,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    elevation: 6,
   },
-  menuItem: {
+  menuHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+  },
+  closeBtn: { padding: 6, paddingHorizontal: 10, borderRadius: 8 },
+
+  availabilityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(0,0,0,0.03)",
+    marginBottom: 6,
   },
+
+  menuItem: { paddingVertical: 10, paddingHorizontal: 6 },
+
+  // Other modals
   popupOverlay: {
     flex: 1,
     justifyContent: "center",
@@ -963,10 +830,7 @@ const styles = StyleSheet.create({
     width: width * 0.8,
     alignItems: "center",
   },
-  verifyButton: {
-    marginTop: 20,
-    width: "80%",
-  },
+  verifyButton: { marginTop: 20, width: "80%" },
   userCard: {
     backgroundColor: Colors.light.surface,
     padding: 20,
@@ -974,27 +838,11 @@ const styles = StyleSheet.create({
     width: width * 0.8,
     alignItems: "center",
   },
-  cardButton: {
-    marginTop: 10,
-    width: "80%",
-  },
-  userImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 10,
-  },
-  markerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  userMarkerContainer: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 5,
-    borderWidth: 2,
-    borderColor: "#FF5722",
-  },
+  cardButton: { marginTop: 10, width: "80%" },
+  userImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 10 },
+  markerContainer: { alignItems: "center", justifyContent: "center" },
+  userMarkerContainer: { backgroundColor: "white", borderRadius: 20, padding: 5, borderWidth: 2, borderColor: "#FF5722" },
+
   searchingContainer: {
     position: "absolute",
     bottom: 20,
@@ -1009,24 +857,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  loadingBarContainer: {
-    height: 4,
-    backgroundColor: "#E0E0E0",
-    borderRadius: 2,
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  loadingBar: {
-    height: "100%",
-    width: "100%",
-    backgroundColor: "#4CAF50",
-    borderRadius: 2,
-  },
-  searchingInfo: {
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  cancelButton: {
-    backgroundColor: Colors.light.danger,
-  },
+  loadingBarContainer: { height: 4, backgroundColor: "#E0E0E0", borderRadius: 2, overflow: "hidden", marginBottom: 10 },
+  loadingBar: { height: "100%", width: "100%", backgroundColor: "#4CAF50", borderRadius: 2 },
+  searchingInfo: { alignItems: "center", marginBottom: 10 },
+  cancelButton: { backgroundColor: Colors.light.danger },
 });
