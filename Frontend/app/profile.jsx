@@ -26,6 +26,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
 const { width, height } = Dimensions.get("window");
 
+
+
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState("");

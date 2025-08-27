@@ -1,59 +1,106 @@
+// login.jsx
 import React, { useState } from "react";
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, TextInput, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedButton } from "@/components/ThemedButton";
+import { BASE_URL } from "@/config"; // <- uses your config.js
+
+// Adjust if your backend path differs:
+const LOGIN_PATH = "/api/v1/auth/login";
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(""); // email or username
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const background = useThemeColor({}, "background");
   const text = useThemeColor({}, "text");
   const border = useThemeColor({}, "primary");
 
+  const saveAuth = async (payload) => {
+    // Supports multiple response shapes:
+    // { token, user } OR { data: { token?, user } }
+    const token =
+      payload?.token ||
+      payload?.accessToken ||
+      payload?.data?.token ||
+      payload?.data?.accessToken ||
+      null;
+
+    const user =
+      payload?.user ||
+      payload?.data?.user ||
+      null;
+
+    if (user) {
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+    }
+    if (token) {
+      await AsyncStorage.setItem("token", String(token));
+    }
+  };
+
   const handleLogin = async () => {
+    console.log("Login pressed");
     if (!username || !password) {
-      alert("Please enter both username and password");
+      Alert.alert("Missing info", "Please enter both username/email and password.");
       return;
     }
 
     try {
-      const response = await fetch("http://10.0.2.2:5000/api/v1/auth/login", {
+      setLoading(true);
+
+      const res = await fetch(`${BASE_URL}${LOGIN_PATH}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userName: username, password }),
+        // Send both 'email' and 'userName' so your API can accept either
+        body: JSON.stringify({ email: username, userName: username, password }),
       });
 
-      const data = await response.json();
-
-      if (response.ok && data?.data?.user) {
-        const user = data.data.user;
-        await AsyncStorage.setItem("user", JSON.stringify(user));
-        await AsyncStorage.setItem("token", data.token);
-        router.replace("/home");
-      } else {
-        alert(data.message || "Login failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          data?.message ||
+          data?.error ||
+          `Login failed (status ${res.status})`;
+        throw new Error(msg);
       }
+
+      await saveAuth(data);
+
+      // Navigate to your home route (change if different)
+      router.replace("/home");
     } catch (err) {
-      alert("Something went wrong. Please try again.");
-      console.error("Login error:", err);
+      console.error("Login error:", err?.message || err);
+      Alert.alert("Login error", String(err?.message || "Something went wrong"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
-      <ThemedText type="title" style={styles.title}>Login</ThemedText>
+      <ThemedText type="title" style={styles.title}>
+        Login
+      </ThemedText>
 
       <TextInput
         style={[styles.input, { borderColor: border, color: text }]}
-        placeholder="Username"
+        placeholder="Username or Email"
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
+        autoCorrect={false}
         placeholderTextColor={border}
+        returnKeyType="next"
       />
 
       <TextInput
@@ -63,17 +110,30 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
         placeholderTextColor={border}
+        returnKeyType="done"
+        onSubmitEditing={handleLogin}
       />
 
-      <ThemedText type="link" onPress={() => router.push("/forgotPassword")} style={{ textAlign: "right", marginBottom: 20 }}>
+      <ThemedText
+        type="link"
+        onPress={() => router.push("/forgotPassword")}
+        style={{ textAlign: "right", marginBottom: 20 }}
+      >
         Forgot Password?
       </ThemedText>
 
-      <ThemedButton title="Login" onPress={handleLogin} />
+      <ThemedButton
+        title={loading ? "Signing in…" : "Login"}
+        onPress={handleLogin}
+        disabled={loading}
+      />
 
       <View style={styles.footerTextContainer}>
         <ThemedText type="default">
-          Don't have an account? <ThemedText type="link" onPress={() => router.push("/register")}>Register</ThemedText>
+          Don't have an account?{" "}
+          <ThemedText type="link" onPress={() => router.push("/register")}>
+            Register
+          </ThemedText>
         </ThemedText>
       </View>
     </View>
@@ -90,7 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 20,
-    backgroundColor: "#FBE6DAa",
+    backgroundColor: "#FBE6DA", // fixed stray alpha from earlier
   },
   footerTextContainer: { marginTop: 24, alignItems: "center" },
 });
