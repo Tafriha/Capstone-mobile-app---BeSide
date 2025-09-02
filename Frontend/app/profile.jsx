@@ -22,8 +22,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import { BASE_URL } from "@/config";
 
-const API_BASE_URL = "http://10.0.2.2:5000/api/v1/user";
+const API_BASE_URL = `${BASE_URL}/api/v1/user`;
 const { width, height } = Dimensions.get("window");
 
 

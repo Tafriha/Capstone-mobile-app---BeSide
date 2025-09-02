@@ -32,6 +32,7 @@ import { ThemedButton } from "@/components/ThemedButton";
 import ConsentModal from "./ConsentModal";
 import CompanionPreferencesModal from "./CompanionPreferencesModal";
 import PhotoUploadModal from "./PhotoUploadModal";
+import { BASE_URL } from "../config"; // ✅ unify API base like verify.jsx
 
 const { width } = Dimensions.get("window");
 
@@ -179,41 +180,49 @@ export default function HomeScreen() {
 
   const handleFindCompanion = async () => {
     const storedUser = await AsyncStorage.getItem("user");
-    const token = await AsyncStorage.getItem("token");
-    if (!storedUser || !token) {
+    const tokenFromStorage = await AsyncStorage.getItem("token");
+    if (!storedUser) {
       router.replace("/login");
       return;
     }
-    const parsed = JSON.parse(storedUser);
-    if (parsed.isVerified) {
-      try {
-        const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
-        const response = await fetch(`${API_URL}/api/v1/trip/createTripReq`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            user: { userId: parsed._id, userName: parsed.userName, userImage: parsed.userImage || "default.jpg" },
-            destination: "Placeholder",
-            destinationType: "By Walk",
-            date: new Date(),
-            time: "12:00",
-            genderPreference: "any",
-          }),
-        });
 
-        const result = await response.json();
-        if (result.status === "success") {
-          setCurrentTripRequestId(result.data.tripRequest.tripReqId);
-          setConsentVisible(true);
-        } else {
-          throw new Error(result.message || "Failed to create trip request");
-        }
-      } catch (error) {
-        Alert.alert("Error", error.message || "Failed to create trip request.");
-        return;
+    const parsed = JSON.parse(storedUser);
+    const token = tokenFromStorage || parsed?.token;
+    if (!token) {
+      Alert.alert("Not Authenticated", "Please login again.");
+      router.replace("/login");
+      return;
+    }
+
+    if (!parsed.isVerified) {
+      setModalVisible(true); // not verified popup
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/trip/createTripReq`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          user: { userId: parsed._id, userName: parsed.userName, userImage: parsed.userImage || "default.jpg" },
+          destination: "Placeholder",
+          destinationType: "By Walk",
+          date: new Date(),
+          time: "12:00",
+          genderPreference: "any",
+        }),
+      });
+
+      const result = await response.json();
+      if (response.ok && result?.data?.tripRequest?.tripReqId) {
+        setCurrentTripRequestId(result.data.tripRequest.tripReqId);
+        setConsentVisible(true); // ✅ proceed to Consent
+      } else {
+        throw new Error(result?.message || `Trip request failed (${response.status})`);
       }
-    } else {
-      setModalVisible(true);
+    } catch (error) {
+      Alert.alert("Error", error.message || "Failed to create trip request.");
+      return;
     }
   };
 
@@ -225,32 +234,37 @@ export default function HomeScreen() {
 
     try {
       const storedUser = await AsyncStorage.getItem("user");
-      const token = await AsyncStorage.getItem("token");
-      if (!storedUser || !token) {
+      const tokenFromStorage = await AsyncStorage.getItem("token");
+      if (!storedUser) {
         Alert.alert("Error", "User not logged in.");
         router.replace("/login");
         return;
       }
 
-      const user = JSON.parse(storedUser);
-      const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
+      const parsed = JSON.parse(storedUser);
+      const token = tokenFromStorage || parsed?.token;
+      if (!token) {
+        Alert.alert("Not Authenticated", "Please login again.");
+        router.replace("/login");
+        return;
+      }
 
       const formData = new FormData();
       formData.append("photo", { uri: url, type: "image/jpeg", name: `selfie-${Date.now()}.jpg` });
 
-      const response = await fetch(`${API_URL}/api/v1/trip/upload-photo/${currentTripRequestId}`, {
+      const response = await fetch(`${BASE_URL}/api/v1/trip/upload-photo/${currentTripRequestId}`, {
         method: "POST",
         body: formData,
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const result = await response.json();
-      if (result.status === "success") {
+      if (response.ok && result?.status === "success") {
         setPhotoUrl(result.data.photoUrl);
         setPhotoUploadVisible(false);
-        setPreferencesVisible(true);
+        setPreferencesVisible(true); // ✅ next: Preferences
       } else {
-        throw new Error(result.message || "Failed to upload photo");
+        throw new Error(result?.message || "Failed to upload photo");
       }
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to upload photo.");
@@ -365,33 +379,38 @@ export default function HomeScreen() {
 
     try {
       const storedUser = await AsyncStorage.getItem("user");
+      const tokenFromStorage = await AsyncStorage.getItem("token");
       if (!storedUser) {
         Alert.alert("Error", "User not logged in.");
         router.replace("/login");
         return;
       }
+      const parsed = JSON.parse(storedUser);
+      const token = tokenFromStorage || parsed?.token;
+      if (!token) {
+        Alert.alert("Not Authenticated", "Please login again.");
+        router.replace("/login");
+        return;
+      }
 
-      const user = JSON.parse(storedUser);
-      const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
-
-      const response = await fetch(`${API_URL}/api/v1/trip-request/sendRequest`, {
+      const response = await fetch(`${BASE_URL}/api/v1/trip-request/sendRequest`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          senderId: user._id,
+          senderId: parsed._id,
           receiverId: selectedUser.userName,
           consent: consent,
-          preferences: { gender: user.genderPreference || "any" },
+          preferences: { gender: parsed.genderPreference || "any" },
           photoUrl: photoUrl,
         }),
       });
 
       const result = await response.json();
-      if (result.status === "success") {
+      if (response.ok && result?.status === "success") {
         Alert.alert("Success", "Request sent to " + selectedUser.userName);
         setSelectedUser(null);
       } else {
-        throw new Error(result.message || "Failed to send request");
+        throw new Error(result?.message || "Failed to send request");
       }
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to send request.");
@@ -413,8 +432,7 @@ export default function HomeScreen() {
       const bearer = token || parsedUser?.token;
       if (!bearer) throw new Error("Not authenticated");
 
-      const API_URL = Platform.OS === "android" ? "http://10.0.2.2:5000" : "http://localhost:5000";
-      const res = await fetch(`${API_URL}/api/v1/user/availability`, {
+      const res = await fetch(`${BASE_URL}/api/v1/user/availability`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearer}` },
         body: JSON.stringify({ availability: value }),
@@ -727,13 +745,21 @@ export default function HomeScreen() {
         setConsent={setConsent}
         onSubmit={() => {
           setConsentVisible(false);
-          setPhotoUploadVisible(true);
+          setPhotoUploadVisible(true); // ✅ Consent → Selfie
         }}
       />
 
-      <CompanionPreferencesModal visible={preferencesVisible} onClose={() => setPreferencesVisible(false)} onSubmit={handlePreferencesSubmit} />
+      <CompanionPreferencesModal
+        visible={preferencesVisible}
+        onClose={() => setPreferencesVisible(false)}
+        onSubmit={handlePreferencesSubmit}
+      />
 
-      <PhotoUploadModal visible={photoUploadVisible} onClose={() => setPhotoUploadVisible(false)} onSubmit={handlePhotoSubmit} />
+      <PhotoUploadModal
+        visible={photoUploadVisible}
+        onClose={() => setPhotoUploadVisible(false)}
+        onSubmit={handlePhotoSubmit} // ✅ Selfie → Preferences after upload
+      />
     </View>
   );
 }
